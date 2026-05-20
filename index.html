@@ -231,6 +231,15 @@ window.HF = (() => {
 
 // ─── Desktop sub-components ──────────────────────────────────────────────────
 
+function splitSentences(text) {
+  if (!text) return [];
+  return text.trim().split(/\.\s+/).map(s => s.trim()).filter(Boolean);
+}
+
+function addPeriod(s) {
+  return /[.!?]$/.test(s) ? s : s + '.';
+}
+
 function DigestBanner({ D }) {
   const { tokens: T, moodColor, moodLabel, Eyebrow, CatLabel } = window.HF;
   const [open, setOpen] = React.useState(true);
@@ -311,19 +320,60 @@ function DigestBanner({ D }) {
 
       <div>
         <Eyebrow style={{ color: T.accent }}>AI Digest · {D.date}</Eyebrow>
-        <p style={{ fontFamily: T.fontSerif, fontSize: 13, lineHeight: 1.5,
-                    color: T.ink1, margin: '4px 0 0', textWrap: 'pretty' }}>
-          {D.digest.body || 'No digest available for this day.'}
-        </p>
+        {(() => {
+          const sentences = splitSentences(D.digest.body);
+          if (!sentences.length) return (
+            <p style={{ fontFamily: T.fontSerif, fontSize: 13, color: T.ink3,
+                        margin: '4px 0 0', fontStyle: 'italic' }}>
+              No digest available for this day.
+            </p>
+          );
+          const [lead, ...rest] = sentences;
+          return (
+            <div style={{ marginTop: 4 }}>
+              <p style={{ fontFamily: T.fontSerif, fontSize: 13, lineHeight: 1.55,
+                          color: T.ink1, margin: '0 0 5px', fontWeight: 600 }}>
+                {addPeriod(lead)}
+              </p>
+              {rest.length > 0 && (
+                <ul style={{ margin: 0, paddingLeft: 15,
+                             listStyleType: 'disc', listStylePosition: 'outside' }}>
+                  {rest.map((s, i) => (
+                    <li key={i} style={{ fontFamily: T.fontSerif, fontSize: 12.5,
+                                        lineHeight: 1.5, color: T.ink2,
+                                        marginBottom: 3 }}>
+                      {addPeriod(s)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       <div style={{ borderLeft: `1px solid ${T.rule}`, paddingLeft: 16 }}>
         <Eyebrow>Second-order impacts</Eyebrow>
-        <p style={{ fontFamily: T.fontSerif, fontSize: 11.5, lineHeight: 1.4,
-                    color: T.ink2, margin: '3px 0 8px',
-                    fontStyle: 'italic', textWrap: 'pretty' }}>
-          {D.digest.secondOrder || '—'}
-        </p>
+        {(() => {
+          const sentences = splitSentences(D.digest.secondOrder);
+          if (!sentences.length) return (
+            <p style={{ fontFamily: T.fontSerif, fontSize: 11.5, color: T.ink3,
+                        margin: '3px 0 8px', fontStyle: 'italic' }}>—</p>
+          );
+          return (
+            <ul style={{ margin: '4px 0 8px', paddingLeft: 15,
+                         listStyleType: 'disc', listStylePosition: 'outside' }}>
+              {sentences.map((s, i) => (
+                <li key={i} style={{ fontFamily: T.fontSerif, fontSize: 11.5,
+                                     lineHeight: 1.45, color: T.ink2,
+                                     fontStyle: 'italic', marginBottom: 3 }}>
+                  {addPeriod(s)}
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
+
         {D.digest.themes.length > 0 && (
           <>
             <Eyebrow>Key themes</Eyebrow>
