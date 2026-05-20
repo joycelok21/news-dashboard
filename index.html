@@ -1,0 +1,1832 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Market Intelligence · Daily Brief</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Newsprint palette */
+  :root {
+    --paper:      #f7f3ea;
+    --paper-alt:  #f1ebdd;
+    --paper-sub:  #ece4d1;
+    --surface:    #ffffff;
+    --ink-0:      #0f0d0a;
+    --ink-1:      #1d1916;
+    --ink-2:      #3a342d;
+    --ink-3:      #6b6359;
+    --ink-4:      #a39a8c;
+    --ink-5:      #cdc4b3;
+    --rule:       rgba(15,13,10,0.10);
+    --rule-2:     rgba(15,13,10,0.18);
+    --accent:     #b83a2a;
+    --accent-sub: #f7e3df;
+    --bull:       #176b39;
+    --bull-bg:    #e3eed9;
+    --bull-sub:   #f0f5e7;
+    --bull-rgb:   23,107,57;
+    --bear:       #a82c25;
+    --bear-bg:    #f3d6d2;
+    --bear-sub:   #f9e7e4;
+    --bear-rgb:   168,44,37;
+    --mixed:      #8b5a13;
+    --mixed-bg:   #f1e2c5;
+    --mixed-sub:  #f7ecd6;
+    --mixed-rgb:  139,90,19;
+    --neutral:    #4a443a;
+    --neutral-bg: #e8e2d2;
+    --neutral-rgb:74,68,58;
+    --p1:         #a82c25;
+    --p2:         #c08a1a;
+    --p3:         #9c9384;
+    color-scheme: light;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: var(--paper-sub); }
+  body { font-family: "Hanken Grotesk", system-ui, sans-serif; color: var(--ink-1); }
+  #root { width: 100%; height: 100vh; display: flex; flex-direction: column; }
+  ::selection { background: var(--accent-sub); color: var(--ink-0); }
+  * { scrollbar-width: thin; scrollbar-color: var(--ink-5) transparent; }
+  *::-webkit-scrollbar { width: 4px; height: 4px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: var(--ink-5); border-radius: 2px; }
+
+  /* Loading screen */
+  #loading {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--paper); gap: 14px;
+    font-family: "Hanken Grotesk", sans-serif;
+    z-index: 999;
+    transition: opacity .3s;
+  }
+  #loading.fade { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2.5px solid var(--rule-2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-label {
+    font-family: "Newsreader", serif;
+    font-size: 18px; font-weight: 600;
+    color: var(--ink-2); font-style: italic;
+  }
+  .loading-sub {
+    font-size: 12px; color: var(--ink-3);
+    letter-spacing: .04em;
+  }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-label">Market Intelligence</div>
+  <div class="loading-sub">Fetching today's brief…</div>
+</div>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
+
+<script type="text/babel">
+// ─── Design tokens + shared primitives ──────────────────────────────────────
+
+window.HF = (() => {
+  const T = {
+    paper:      'var(--paper)',
+    paperAlt:   'var(--paper-alt)',
+    paperSub:   'var(--paper-sub)',
+    surface:    'var(--surface)',
+    ink0:       'var(--ink-0)',
+    ink1:       'var(--ink-1)',
+    ink2:       'var(--ink-2)',
+    ink3:       'var(--ink-3)',
+    ink4:       'var(--ink-4)',
+    ink5:       'var(--ink-5)',
+    rule:       'var(--rule)',
+    rule2:      'var(--rule-2)',
+    accent:     'var(--accent)',
+    accentSub:  'var(--accent-sub)',
+    bull:       'var(--bull)',
+    bullBg:     'var(--bull-bg)',
+    bullSub:    'var(--bull-sub)',
+    bear:       'var(--bear)',
+    bearBg:     'var(--bear-bg)',
+    bearSub:    'var(--bear-sub)',
+    mixed:      'var(--mixed)',
+    mixedBg:    'var(--mixed-bg)',
+    mixedSub:   'var(--mixed-sub)',
+    neutral:    'var(--neutral)',
+    neutBg:     'var(--neutral-bg)',
+    p1:         'var(--p1)',
+    p2:         'var(--p2)',
+    p3:         'var(--p3)',
+    fontDisplay: '"Newsreader", Georgia, serif',
+    fontSerif:   '"Newsreader", Georgia, serif',
+    fontSans:    '"Hanken Grotesk", system-ui, sans-serif',
+    fontMono:    '"JetBrains Mono", ui-monospace, monospace',
+    rSm: 3, rMd: 4, rLg: 8, rXl: 12,
+  };
+
+  const sentTone = (s) => {
+    if (s === 'bull')  return { fg: T.bull,  bg: T.bullBg,  sub: T.bullSub,  label: 'Bullish' };
+    if (s === 'bear')  return { fg: T.bear,  bg: T.bearBg,  sub: T.bearSub,  label: 'Bearish' };
+    if (s === 'mixed') return { fg: T.mixed, bg: T.mixedBg, sub: T.mixedSub, label: 'Mixed'   };
+    return { fg: T.neutral, bg: T.neutBg, sub: T.neutBg, label: 'Neutral' };
+  };
+
+  const prioColor  = (p) => p === 'P1' ? T.p1 : p === 'P2' ? T.p2 : T.p3;
+  const moodColor  = (m) => m === 'bull' ? T.bull : m === 'bear' ? T.bear : m === 'mixed' ? T.mixed : T.neutral;
+  const moodLabel  = (m) => m === 'bull' ? 'Bullish' : m === 'bear' ? 'Bearish' : m === 'mixed' ? 'Mixed' : 'Neutral';
+  const moodFromLabel = (l) => {
+    const s = (l||'').toLowerCase();
+    if (s.startsWith('bull')) return 'bull';
+    if (s.startsWith('bear')) return 'bear';
+    if (s.startsWith('mix'))  return 'mixed';
+    return 'neutral';
+  };
+
+  const Eyebrow = ({ children, color, style = {} }) => (
+    <span style={{ fontFamily: T.fontSans, fontSize: 10, fontWeight: 600,
+                   letterSpacing: '.12em', textTransform: 'uppercase',
+                   color: color || T.ink3, ...style }}>{children}</span>
+  );
+
+  const SectionHeader = ({ label, action, style = {} }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10,
+                  paddingBottom: 6, marginBottom: 10,
+                  borderBottom: `1px solid ${T.rule2}`, ...style }}>
+      <Eyebrow color={T.ink2}>{label}</Eyebrow>
+      <div style={{ flex: 1 }}/>
+      {action}
+    </div>
+  );
+
+  const Ticker = ({ t, size = 11, style = {} }) => (
+    <span style={{ fontFamily: T.fontMono, fontSize: size, fontWeight: 600,
+                   color: T.ink1, background: T.surface,
+                   border: `1px solid ${T.rule2}`, borderRadius: T.rSm,
+                   padding: '1px 5px', letterSpacing: '.02em',
+                   display: 'inline-block', ...style }}>{t}</span>
+  );
+
+  const SentBadge = ({ s, size = 10 }) => {
+    const t = sentTone(s);
+    return (
+      <span style={{ fontFamily: T.fontSans, fontSize: size, fontWeight: 600,
+                     color: t.fg, background: t.sub, border: `1px solid ${t.bg}`,
+                     borderRadius: 999, padding: '1px 8px',
+                     textTransform: 'uppercase', letterSpacing: '.08em',
+                     display: 'inline-block' }}>{t.label}</span>
+    );
+  };
+
+  const SentDot = ({ s, size = 6 }) => {
+    const t = sentTone(s);
+    return (
+      <span style={{ display: 'inline-block', width: size, height: size,
+                     borderRadius: '50%', background: t.fg, verticalAlign: 'middle' }}/>
+    );
+  };
+
+  const PriorityMark = ({ p, size = 16 }) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                   width: size, height: size, background: prioColor(p), color: '#fff',
+                   fontFamily: T.fontMono, fontSize: size * 0.55, fontWeight: 700,
+                   borderRadius: 2, lineHeight: 1 }}>{p}</span>
+  );
+
+  const CatLabel = ({ c, active = false }) => (
+    <span style={{ fontFamily: T.fontSans, fontSize: 10, fontWeight: 600,
+                   color: active ? T.surface : T.ink2,
+                   background: active ? T.ink1 : 'transparent',
+                   border: `1px solid ${active ? T.ink1 : T.rule2}`,
+                   borderRadius: 2, padding: '1px 6px',
+                   textTransform: 'uppercase', letterSpacing: '.08em',
+                   display: 'inline-block', lineHeight: '15px' }}>{c}</span>
+  );
+
+  const Chip = ({ on, children, onClick }) => (
+    <button type="button" onClick={onClick} style={{
+      fontFamily: T.fontSans, fontSize: 12, fontWeight: 500,
+      color: on ? T.surface : T.ink2,
+      background: on ? T.ink1 : T.surface,
+      border: `1px solid ${on ? T.ink1 : T.rule2}`,
+      borderRadius: 999, padding: '4px 12px',
+      cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .12s',
+    }}>{children}</button>
+  );
+
+  return { tokens: T, sentTone, prioColor, moodColor, moodLabel, moodFromLabel,
+           Eyebrow, SectionHeader, Ticker, SentBadge, SentDot, PriorityMark, CatLabel, Chip };
+})();
+
+// ─── Desktop sub-components ──────────────────────────────────────────────────
+
+function DigestBanner({ D }) {
+  const { tokens: T, moodColor, moodLabel, Eyebrow, CatLabel } = window.HF;
+  const [open, setOpen] = React.useState(true);
+  const mc = moodColor(D.mood);
+  const ml = moodLabel(D.mood);
+  const bull = D.articles.filter(a => a.sentiment === 'bull').length;
+  const bear = D.articles.filter(a => a.sentiment === 'bear').length;
+  const mix  = D.articles.filter(a => a.sentiment === 'mixed').length;
+
+  // Collapsed: single slim bar
+  if (!open) {
+    return (
+      <div style={{ padding: '0 24px', background: T.paper,
+                    borderBottom: `1px solid ${T.rule2}`,
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    height: 36, flexShrink: 0 }}>
+        <Eyebrow style={{ color: T.ink3 }}>AI Digest</Eyebrow>
+        <span style={{ fontFamily: T.fontDisplay, fontSize: 14, fontWeight: 700,
+                       color: mc, fontStyle: 'italic' }}>{ml}</span>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: mc, flexShrink: 0 }}/>
+        <span style={{ fontFamily: T.fontMono, fontSize: 10.5, color: T.ink3,
+                       fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ color: T.bull }}>↑{bull}</span>
+          {' · '}
+          <span style={{ color: T.bear }}>↓{bear}</span>
+          {' · '}
+          <span style={{ color: T.mixed }}>≈{mix}</span>
+        </span>
+        <span style={{ width: 1, height: 14, background: T.rule2 }}/>
+        <div style={{ display: 'flex', gap: 4, overflow: 'hidden' }}>
+          {D.digest.themes.slice(0, 4).map(t => (
+            <span key={t} style={{ whiteSpace: 'nowrap' }}><CatLabel c={t}/></span>
+          ))}
+          {D.digest.themes.length > 4 && (
+            <Eyebrow style={{ color: T.ink4 }}>+{D.digest.themes.length - 4} more</Eyebrow>
+          )}
+        </div>
+        <div style={{ flex: 1 }}/>
+        <button onClick={() => setOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 5,
+                   fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
+                   color: T.ink3, background: 'transparent', border: 0,
+                   cursor: 'pointer', padding: 0 }}>
+          Show digest
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8"
+                  strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // Expanded: full banner
+  return (
+    <section style={{ padding: '10px 24px', background: T.paper,
+                      borderBottom: `1px solid ${T.rule2}`,
+                      display: 'grid',
+                      gridTemplateColumns: '140px 680px 1fr',
+                      gap: 16, alignItems: 'stretch',
+                      position: 'relative' }}>
+      <div style={{ borderRight: `1px solid ${T.rule}`, paddingRight: 16 }}>
+        <Eyebrow>Today's mood</Eyebrow>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 3 }}>
+          <span style={{ fontFamily: T.fontDisplay, fontSize: 24, fontWeight: 700,
+                         color: mc, lineHeight: 1, fontStyle: 'italic' }}>{ml}</span>
+          <span style={{ display: 'inline-block', width: 7, height: 7,
+                         background: mc, borderRadius: '50%' }}/>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 6,
+                      fontFamily: T.fontMono, fontSize: 10.5, color: T.ink2,
+                      fontVariantNumeric: 'tabular-nums' }}>
+          <span><b style={{ color: T.bull }}>↑</b> {bull} bull</span>
+          <span><b style={{ color: T.bear }}>↓</b> {bear} bear</span>
+          <span><b style={{ color: T.mixed }}>↔</b> {mix} mix</span>
+        </div>
+      </div>
+
+      <div>
+        <Eyebrow style={{ color: T.accent }}>AI Digest · {D.date}</Eyebrow>
+        <p style={{ fontFamily: T.fontSerif, fontSize: 13, lineHeight: 1.5,
+                    color: T.ink1, margin: '4px 0 0', textWrap: 'pretty' }}>
+          {D.digest.body || 'No digest available for this day.'}
+        </p>
+      </div>
+
+      <div style={{ borderLeft: `1px solid ${T.rule}`, paddingLeft: 16 }}>
+        <Eyebrow>Second-order impacts</Eyebrow>
+        <p style={{ fontFamily: T.fontSerif, fontSize: 11.5, lineHeight: 1.4,
+                    color: T.ink2, margin: '3px 0 8px',
+                    fontStyle: 'italic', textWrap: 'pretty' }}>
+          {D.digest.secondOrder || '—'}
+        </p>
+        {D.digest.themes.length > 0 && (
+          <>
+            <Eyebrow>Key themes</Eyebrow>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+              {D.digest.themes.map(t => (
+                <span key={t} style={{ whiteSpace: 'nowrap' }}><CatLabel c={t}/></span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Collapse button — bottom right of the banner */}
+      <button onClick={() => setOpen(false)}
+        style={{ position: 'absolute', bottom: 8, right: 10,
+                 display: 'flex', alignItems: 'center', gap: 4,
+                 fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
+                 color: T.ink4, background: 'transparent', border: 0,
+                 cursor: 'pointer', padding: 0 }}>
+        Hide digest
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+          <path d="m18 15-6-6-6 6" stroke="currentColor" strokeWidth="1.8"
+                strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+    </section>
+  );
+}
+
+function HourlyTimeline({ D }) {
+  const { tokens: T, Eyebrow, SentDot } = window.HF;
+  const hrs = D.articles.map(a => a.hr);
+  if (!hrs.length) return null;
+  const HSTART = Math.min(...hrs);
+  const HEND   = Math.max(...hrs);
+  const span   = Math.max(1, HEND - HSTART);
+
+  const LegendSwatch = ({ c }) => (
+    <span style={{ display:'inline-block', width:8, height:8, borderRadius:'50%',
+                   background:c, marginRight:5, verticalAlign:'middle' }}/>
+  );
+  return (
+    <section style={{ padding: '12px 24px 16px', background: T.paper,
+                      borderBottom: `1px solid ${T.rule2}` }}>
+      <div style={{ display:'flex', alignItems:'baseline', gap:12, marginBottom:8 }}>
+        <h2 style={{ fontFamily: T.fontDisplay, fontSize: 17, fontWeight: 600,
+                     letterSpacing: '-.01em', margin: 0, whiteSpace: 'nowrap' }}>
+          The day, by the hour
+        </h2>
+        <Eyebrow>{D.articles.length} stories · {D.stats.p12} priority</Eyebrow>
+        <div style={{ flex: 1 }}/>
+        <div style={{ display:'flex', gap:14, fontFamily: T.fontSans, fontSize:11, color: T.ink3 }}>
+          <span><LegendSwatch c={T.bull}/>Bullish</span>
+          <span><LegendSwatch c={T.mixed}/>Mixed</span>
+          <span><LegendSwatch c={T.bear}/>Bearish</span>
+          <span style={{ marginLeft:6, color: T.ink2 }}>● large = P1 · medium = P2</span>
+        </div>
+      </div>
+      <div style={{ position:'relative', height:88, background: T.surface,
+                    border:`1px solid ${T.rule2}`, borderRadius: T.rMd,
+                    padding:'8px 14px 22px' }}>
+        <div style={{ position:'absolute', inset:'8px 14px 22px', display:'flex' }}>
+          {Array.from({ length: span + 1 }).map((_,i) => (
+            <div key={i} style={{ flex:1, borderLeft: i===0 ? 'none' : `1px dashed ${T.rule}` }}/>
+          ))}
+        </div>
+        <div style={{ position:'absolute', inset:'8px 14px 22px' }}>
+          {D.articles.map(a => {
+            const x = ((a.hr - HSTART) / span) * 100;
+            const c = a.sentiment==='bull' ? T.bull : a.sentiment==='bear' ? T.bear :
+                      a.sentiment==='mixed' ? T.mixed : T.ink3;
+            const sz = a.priority==='P1' ? 14 : a.priority==='P2' ? 10 : 7;
+            const y  = 6 + ((String(a.id).charCodeAt(String(a.id).length-1) * 11) % 46);
+            return (
+              <div key={a.id} title={`${a.time} · ${a.headline}`} style={{
+                position:'absolute', left:`${x}%`, top:y,
+                width:sz, height:sz, borderRadius:'50%',
+                background:c, border:`1.5px solid ${T.paper}`,
+                boxShadow: a.priority==='P1' ? `0 0 0 1.5px ${T.p1}` :
+                           a.priority==='P2' ? `0 0 0 1px ${T.ink3}` : 'none',
+                transform:'translate(-50%,0)', cursor:'pointer',
+              }}/>
+            );
+          })}
+        </div>
+        <div style={{ position:'absolute', left:14, right:14, bottom:4, display:'flex',
+                      fontFamily: T.fontMono, fontSize:10, color: T.ink3 }}>
+          {Array.from({ length: span + 1 }).map((_,i) => (
+            <div key={i} style={{ flex:1, textAlign:'left' }}>
+              {String(HSTART+i).padStart(2,'0')}:00
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
+  const { tokens: T, Chip } = window.HF;
+  const cats = window.NEWS_DATA.categories;
+  const Segmented = ({ value, onChange, options }) => (
+    <span style={{ display:'inline-flex', borderRadius:999,
+                   border:`1px solid ${T.rule2}`, background: T.surface, overflow:'hidden' }}>
+      {options.map(opt => {
+        const on = value === opt.v;
+        return (
+          <button key={opt.v} onClick={() => onChange(on ? null : opt.v)}
+            style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
+                     padding:'4px 12px', border:0, cursor:'pointer',
+                     background: on ? (opt.accent || T.ink1) : 'transparent',
+                     color: on ? '#fff' : T.ink2, transition:'all .12s' }}>{opt.label}</button>
+        );
+      })}
+    </span>
+  );
+  return (
+    <div style={{ padding:'9px 24px', background: T.surface,
+                  borderBottom:`1px solid ${T.rule2}`,
+                  display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
+      <Chip on={!cat} onClick={() => setCat(null)}>All</Chip>
+      {cats.map(c => (
+        <Chip key={c} on={cat===c} onClick={() => setCat(cat===c ? null : c)}>{c}</Chip>
+      ))}
+      <div style={{ flex:1 }}/>
+      <Segmented value={prio} onChange={setPrio} options={[
+        { v:'P1', label:'P1' }, { v:'P2', label:'P2' }, { v:'P3', label:'P3' },
+      ]}/>
+      <Segmented value={sent} onChange={setSent} options={[
+        { v:'bull',  label:'Bull',  accent: T.bull  },
+        { v:'bear',  label:'Bear',  accent: T.bear  },
+        { v:'mixed', label:'Mixed', accent: T.mixed },
+      ]}/>
+    </div>
+  );
+}
+
+function ActiveFilters({ searchQ, prio, sent, cat, ticker,
+                          setSearchQ, setPrio, setSent, setCat, setTicker,
+                          clearAll, count, total }) {
+  const { tokens: T } = window.HF;
+  const FilterChip = ({ label, onClear }) => (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:6,
+                   background: T.accentSub, color: T.ink1,
+                   border:`1px solid ${T.accent}`, borderRadius:999,
+                   padding:'2px 4px 2px 10px',
+                   fontFamily: T.fontSans, fontSize:11, fontWeight:500 }}>
+      {label}
+      <button onClick={onClear} style={{ display:'inline-flex', alignItems:'center',
+                                         justifyContent:'center', width:16, height:16,
+                                         borderRadius:'50%', background: T.accent,
+                                         color:'#fff', border:0, cursor:'pointer',
+                                         fontSize:11, lineHeight:1 }}>×</button>
+    </span>
+  );
+  return (
+    <div style={{ padding:'8px 24px', background: T.accentSub,
+                  borderBottom:`1px solid ${T.rule2}`,
+                  display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+      <span style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:700,
+                     color: T.accent, textTransform:'uppercase', letterSpacing:'.1em' }}>Filtering</span>
+      <span style={{ fontFamily: T.fontMono, fontSize:11, color: T.ink2 }}>
+        {count} <span style={{ color: T.ink3 }}>of {total} stories</span>
+      </span>
+      <span style={{ width:1, height:14, background: T.rule2 }}/>
+      {searchQ && <FilterChip label={`"${searchQ}"`} onClear={() => setSearchQ('')}/>}
+      {ticker   && <FilterChip label={`Ticker · ${ticker}`} onClear={() => setTicker(null)}/>}
+      {cat      && <FilterChip label={`Category · ${cat}`}  onClear={() => setCat(null)}/>}
+      {prio     && <FilterChip label={`Priority · ${prio}`} onClear={() => setPrio(null)}/>}
+      {sent     && <FilterChip label={`Sentiment · ${sent}`} onClear={() => setSent(null)}/>}
+      <div style={{ flex:1 }}/>
+      <button onClick={clearAll} style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
+                                           color: T.accent, background:'transparent',
+                                           border:0, cursor:'pointer', padding:0 }}>Clear all →</button>
+    </div>
+  );
+}
+
+function ArticleCard({ a, selectedTicker, onTickerClick }) {
+  const { tokens: T, sentTone, SentBadge, PriorityMark, CatLabel, Ticker } = window.HF;
+  const tone = sentTone(a.sentiment);
+  const isPriority = a.priority === 'P1' || a.priority === 'P2';
+  return (
+    <article style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                      borderRadius: T.rMd, padding:'12px 14px',
+                      boxShadow: a.priority==='P1' ? `inset 3px 0 0 0 ${T.p1}` :
+                                 a.priority==='P2' ? `inset 3px 0 0 0 ${T.p2}` : 'none',
+                      paddingLeft: isPriority ? 17 : 14 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6, flexWrap:'wrap' }}>
+        <PriorityMark p={a.priority}/>
+        <span style={{ fontFamily: T.fontMono, fontSize:11, color: T.ink2,
+                       fontVariantNumeric:'tabular-nums' }}>{a.time}</span>
+        <span style={{ width:3, height:3, borderRadius:'50%', background: T.ink4 }}/>
+        <span style={{ fontFamily: T.fontSans, fontSize:11.5, color: T.ink2, fontWeight:500 }}>{a.source}</span>
+        {a.cats.map(c => <CatLabel key={c} c={c}/>)}
+        <div style={{ flex:1 }}/>
+        <SentBadge s={a.sentiment} size={9}/>
+      </div>
+      {a.url ? (
+        <a href={a.url} target="_blank" rel="noopener noreferrer"
+           style={{ textDecoration:'none', color:'inherit', display:'block' }}>
+          <h3 style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:18, lineHeight:1.22,
+                       margin:'0 0 6px', color: T.ink0, letterSpacing:'-.005em',
+                       transition:'color .12s' }}
+              onMouseEnter={e => e.currentTarget.style.color = T.accent}
+              onMouseLeave={e => e.currentTarget.style.color = T.ink0}>{a.headline}</h3>
+        </a>
+      ) : (
+        <h3 style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:18, lineHeight:1.22,
+                     margin:'0 0 6px', color: T.ink0, letterSpacing:'-.005em' }}>{a.headline}</h3>
+      )}
+      <p style={{ fontFamily: T.fontSerif, fontSize:13, lineHeight:1.5,
+                  color: T.ink2, margin:'0 0 8px' }}>{a.summary}</p>
+      {a.implication && (
+        <div style={{ display:'flex', alignItems:'flex-start', gap:6,
+                      background: tone.sub, border:`1px solid ${tone.bg}`,
+                      padding:'4px 9px', borderRadius: T.rSm,
+                      marginBottom:8, maxWidth:600 }}>
+          <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:700,
+                         color: tone.fg, textTransform:'uppercase', letterSpacing:'.1em',
+                         flexShrink:0, paddingTop:1 }}>Implication</span>
+          <span style={{ fontFamily: T.fontSerif, fontSize:12, color: T.ink1,
+                         lineHeight:1.4, fontStyle:'italic' }}>{a.implication}</span>
+        </div>
+      )}
+      <div style={{ display:'flex', alignItems:'center', gap:4, flexWrap:'wrap' }}>
+        <div style={{ flex:1 }}/>
+        {a.tickers.map(t => {
+          const active = selectedTicker === t;
+          return (
+            <button key={t} onClick={() => onTickerClick && onTickerClick(t)}
+              style={{ fontFamily: T.fontMono, fontSize:11, fontWeight:600,
+                       color: active ? '#fff' : T.ink1,
+                       background: active ? T.accent : T.surface,
+                       border:`1px solid ${active ? T.accent : T.rule2}`,
+                       borderRadius: T.rSm, padding:'1px 5px',
+                       cursor:'pointer', transition:'all .12s' }}>{t}</button>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
+function HourBlock({ hour, articles, selectedTicker, onTickerClick }) {
+  const { tokens: T } = window.HF;
+  return (
+    <section style={{ display:'grid', gridTemplateColumns:'64px 1fr', gap:16, marginBottom:18 }}>
+      <div style={{ position:'sticky', top:0, borderRight:`1px solid ${T.rule}`, paddingRight:10 }}>
+        <div style={{ fontFamily: T.fontDisplay, fontSize:30, fontWeight:700, lineHeight:1,
+                      textAlign:'right', fontVariantNumeric:'tabular-nums', color: T.ink1 }}>
+          {String(hour).padStart(2,'0')}
+        </div>
+        <div style={{ fontFamily: T.fontSans, fontSize:10, color: T.ink3, textAlign:'right',
+                      marginTop:4, textTransform:'uppercase', letterSpacing:'.08em' }}>:00 hour</div>
+        <div style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink4, textAlign:'right', marginTop:4 }}>
+          {articles.length} {articles.length===1 ? 'story' : 'stories'}
+        </div>
+      </div>
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+        {articles.map(a => (
+          <ArticleCard key={a.id} a={a} selectedTicker={selectedTicker} onTickerClick={onTickerClick}/>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SidebarHeatmap({ day }) {
+  const { tokens: T } = window.HF;
+  const D = day || window.NEWS_DATA;
+  const categories = window.NEWS_DATA.categories;
+  const counts = categories.map(c =>
+    Array.from({ length: 6 }, (_, b) =>
+      D.articles.filter(a => a.cats.includes(c) && Math.floor((a.hr - 1) / 3) === b)
+    )
+  );
+  const max = Math.max(...counts.flat().map(arts => arts.length), 1);
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'74px repeat(6,1fr)', gap:2,
+                  fontFamily: T.fontMono, fontSize:9 }}>
+      <div/>
+      {['01','04','07','10','13','16'].map((h,i) => (
+        <div key={i} style={{ textAlign:'center', color: T.ink3, paddingBottom:2 }}>{h}</div>
+      ))}
+      {categories.map((c, ri) => (
+        <React.Fragment key={c}>
+          <div style={{ fontFamily: T.fontSans, fontSize:10.5, color: T.ink2, fontWeight:500,
+                        lineHeight:'16px', overflow:'hidden', whiteSpace:'nowrap',
+                        textOverflow:'ellipsis', paddingRight:4 }}>{c}</div>
+          {counts[ri].map((arts, ci) => {
+            if (!arts.length) return <div key={ci} style={{ height:18, background: T.surface, border:`1px solid ${T.rule2}` }}/>;
+            const bull = arts.filter(a => a.sentiment==='bull').length;
+            const bear = arts.filter(a => a.sentiment==='bear').length;
+            const dom  = bull >= bear ? (bull > 0 ? 'bull' : 'mixed') : 'bear';
+            const fg   = dom==='bull' ? T.bull : dom==='bear' ? T.bear : T.mixed;
+            const intensity = 0.22 + 0.78 * (arts.length / max);
+            const hasP1 = arts.some(a => a.priority==='P1');
+            return (
+              <div key={ci} title={arts.map(a => a.headline).join('\n')} style={{
+                height:18, background:`color-mix(in oklab, ${fg} ${Math.round(intensity*100)}%, transparent)`,
+                border:`1px solid ${T.rule2}`, position:'relative',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontWeight:700, fontSize:9, color:'#fff', cursor:'pointer',
+              }}>
+                {arts.length}
+                {hasP1 && <span style={{ position:'absolute', top:2, right:2, width:4, height:4,
+                                         background:'#fff', borderRadius:'50%' }}/>}
+              </div>
+            );
+          })}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// ─── Desktop day view ────────────────────────────────────────────────────────
+
+function HifiDesktop({ day }) {
+  const D = day || window.NEWS_DATA;
+  const { tokens: T, Eyebrow, SectionHeader, Ticker, SentBadge } = window.HF;
+
+  const [searchQ,  setSearchQ]  = React.useState('');
+  const [prio,     setPrio]     = React.useState(null);
+  const [sent,     setSent]     = React.useState(null);
+  const [cat,      setCat]      = React.useState(null);
+  const [ticker,   setTicker]   = React.useState(null);
+
+  const filtered = React.useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    return D.articles.filter(a => {
+      if (prio   && a.priority !== prio) return false;
+      if (sent   && a.sentiment !== sent) return false;
+      if (cat    && !a.cats.includes(cat)) return false;
+      if (ticker && !a.tickers.includes(ticker)) return false;
+      if (q) {
+        const blob = [a.headline, a.summary, ...a.tickers, ...a.cats, a.source, a.implication]
+                       .join(' ').toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [D.articles, searchQ, prio, sent, cat, ticker]);
+
+  const byHour = {};
+  filtered.forEach(a => { (byHour[a.hr] = byHour[a.hr] || []).push(a); });
+  const hours = Object.keys(byHour).map(Number).sort((a,b) => b - a);
+  const anyFilter = !!(searchQ || prio || sent || cat || ticker);
+  const clearAll  = () => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); setTicker(null); };
+  const onTickerClick = (t) => setTicker(curr => curr === t ? null : t);
+
+  return (
+    <div style={{ background: T.paper, height:'100%', overflow:'hidden',
+                  fontFamily: T.fontSans, color: T.ink1,
+                  display:'flex', flexDirection:'column' }}>
+
+      {/* Top bar */}
+      <header style={{ padding:'12px 24px', background: T.paper,
+                       borderBottom:`1px solid ${T.rule2}`,
+                       display:'flex', alignItems:'center', gap:18 }}>
+        <span style={{ fontFamily: T.fontDisplay, fontSize:22, fontWeight:700,
+                       letterSpacing:'-.02em', lineHeight:1, whiteSpace:'nowrap' }}>
+          <span style={{ fontStyle:'italic', color: T.accent }}>{D.dateShort || 'Today'}</span>
+          {' '}<span style={{ color: T.ink3, fontWeight:500 }}>· daily brief</span>
+        </span>
+        <span style={{ width:1, height:18, background: T.rule2 }}/>
+        <Eyebrow style={{ color: T.ink2 }}>{D.date}</Eyebrow>
+        <span style={{ width:4, height:4, borderRadius:'50%', background: T.bull }}/>
+        <Eyebrow style={{ color: T.ink3 }}>Refreshed {D.refreshed}</Eyebrow>
+        <div style={{ flex:1 }}/>
+        <div style={{ position:'relative', width:300 }}>
+          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                 placeholder="Search headlines, tickers, themes…"
+                 style={{ width:'100%', padding:'7px 30px 7px 28px',
+                          fontFamily: T.fontSans, fontSize:12.5,
+                          background: T.surface, color: T.ink1,
+                          border:`1px solid ${searchQ ? T.accent : T.rule2}`,
+                          borderRadius:999, outline:'none' }}/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               style={{ position:'absolute', left:9, top:8,
+                        color: searchQ ? T.accent : T.ink3 }}>
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6"/>
+            <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+          {searchQ && (
+            <button onClick={() => setSearchQ('')}
+              style={{ position:'absolute', right:6, top:4, width:20, height:20,
+                       display:'flex', alignItems:'center', justifyContent:'center',
+                       background: T.paperSub, border:0, borderRadius:'50%',
+                       color: T.ink2, cursor:'pointer', fontSize:12 }}>×</button>
+          )}
+        </div>
+      </header>
+
+      <DigestBanner D={D}/>
+      <FilterRow D={D} cat={cat} setCat={setCat} prio={prio} setPrio={setPrio}
+                 sent={sent} setSent={setSent}/>
+      {anyFilter && (
+        <ActiveFilters searchQ={searchQ} prio={prio} sent={sent} cat={cat} ticker={ticker}
+                       setSearchQ={setSearchQ} setPrio={setPrio} setSent={setSent}
+                       setCat={setCat} setTicker={setTicker} clearAll={clearAll}
+                       count={filtered.length} total={D.articles.length}/>
+      )}
+
+      {/* Feed + sidebar */}
+      <div style={{ flex:1, display:'grid', gridTemplateColumns:'1fr 280px', minHeight:0 }}>
+        <main ref={el => { if (el) el._feedRef = el; }} id="feed-main"
+              onScroll={e => {
+                const btn = document.getElementById('scroll-top-btn');
+                if (btn) btn.style.opacity = e.currentTarget.scrollTop > 300 ? '1' : '0';
+              }}
+              style={{ overflow:'auto', padding:'14px 24px 18px', position:'relative' }}>
+          {hours.length === 0 ? (
+            <div style={{ padding:'60px 24px', textAlign:'center',
+                          background: T.surface, border:`1px dashed ${T.rule2}`,
+                          borderRadius: T.rLg }}>
+              <div style={{ fontFamily: T.fontDisplay, fontSize:22, fontWeight:600,
+                             color: T.ink2, marginBottom:6, fontStyle:'italic' }}>
+                No stories match.
+              </div>
+              <button onClick={clearAll} style={{ fontFamily: T.fontSans, fontSize:12,
+                                                   fontWeight:600, color:'#fff',
+                                                   background: T.ink1, border:0,
+                                                   borderRadius:999, padding:'7px 18px',
+                                                   cursor:'pointer' }}>Clear all filters</button>
+            </div>
+          ) : (
+            hours.map(h => (
+              <HourBlock key={h} hour={h} articles={byHour[h]}
+                         selectedTicker={ticker} onTickerClick={onTickerClick}/>
+            ))
+          )}
+          {/* Sticky scroll-to-top */}
+          <div style={{ position:'sticky', bottom:16, display:'flex',
+                        justifyContent:'flex-end', pointerEvents:'none', marginTop:8 }}>
+            <button id="scroll-top-btn"
+              onClick={() => { const el = document.getElementById('feed-main'); if (el) el.scrollTo({ top:0, behavior:'smooth' }); }}
+              style={{ pointerEvents:'auto', width:36, height:36, borderRadius:'50%',
+                       background: T.ink1, color:'#fff',
+                       border:'none', cursor:'pointer',
+                       display:'flex', alignItems:'center', justifyContent:'center',
+                       boxShadow:'0 2px 10px rgba(0,0,0,.22)',
+                       opacity:0, transition:'opacity .2s' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M18 15 12 9l-6 6" stroke="currentColor" strokeWidth="2.5"
+                      strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </main>
+
+        <aside style={{ borderLeft:`1px solid ${T.rule2}`, background: T.paperAlt,
+                        padding:'14px 14px 18px', overflow:'auto',
+                        display:'flex', flexDirection:'column', gap:18 }}>
+          {/* Tickers */}
+          <section>
+            <SectionHeader label="Tickers in news"
+              action={<span style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink3 }}>{D.tickers.length}</span>}/>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+              {D.tickers.map(t => {
+                const n = D.articles.filter(a => a.tickers.includes(t)).length;
+                const active = ticker === t;
+                return (
+                  <button key={t} onClick={() => onTickerClick(t)} style={{
+                    display:'inline-flex', alignItems:'center', gap:4,
+                    fontFamily: T.fontMono, fontSize:11, fontWeight:600,
+                    background: active ? T.accent : T.surface,
+                    color: active ? '#fff' : T.ink1,
+                    border:`1px solid ${active ? T.accent : T.rule2}`,
+                    borderRadius:3, padding:'2px 6px', cursor:'pointer', transition:'all .12s',
+                  }}>
+                    {t}
+                    <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:500,
+                                   color: active ? '#fff' : T.ink3,
+                                   background: active ? 'rgba(255,255,255,.2)' : T.paperSub,
+                                   padding:'0 4px', borderRadius:6 }}>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Past digests */}
+          <section>
+            <SectionHeader label="Past digests"/>
+            <div style={{ display:'flex', flexDirection:'column' }}>
+              {window.NEWS_DATA.days.map((p, i, arr) => {
+                const { tokens: T, SentBadge } = window.HF;
+                const isCurrent = p.dateKey === D.dateKey;
+                return (
+                  <div key={p.dateKey} style={{ display:'flex', alignItems:'center',
+                                                justifyContent:'space-between',
+                                                padding:'6px 4px',
+                                                borderBottom: i < arr.length-1 ? `1px solid ${T.rule}` : 'none',
+                                                background: isCurrent ? T.accentSub : 'transparent' }}>
+                    <span style={{ fontFamily: T.fontSerif, fontSize:13,
+                                   fontWeight: isCurrent ? 700 : 500,
+                                   color: isCurrent ? T.ink0 : T.ink2 }}>
+                      {p.dateShort}
+                      {isCurrent && <span style={{ color: T.accent, fontSize:10, marginLeft:4 }}>· viewing</span>}
+                    </span>
+                    <SentBadge s={p.mood==='neutral' ? null : p.mood} size={9}/>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Heatmap */}
+          <section>
+            <SectionHeader label="Heatmap · cat × hour"
+              action={<Eyebrow style={{ fontSize:9 }}>{D.stats.total} stories</Eyebrow>}/>
+            <SidebarHeatmap day={D}/>
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:6,
+                          fontFamily: T.fontSans, fontSize:10, color: T.ink3 }}>
+              <span><span style={{ display:'inline-block', width:6, height:6, background: T.bull, marginRight:4 }}/>bull</span>
+              <span><span style={{ display:'inline-block', width:6, height:6, background: T.mixed, marginRight:4 }}/>mixed</span>
+              <span><span style={{ display:'inline-block', width:6, height:6, background: T.bear, marginRight:4 }}/>bear</span>
+            </div>
+          </section>
+
+          {/* Stats */}
+          <section>
+            <SectionHeader label="Today's run"/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+              {[['P1 + P2', D.stats.p12], ['Total', D.stats.total],
+                ['Sources', D.stats.sources], ['Tickers', D.tickers.length]].map(([l, n]) => (
+                <div key={l} style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                                      borderRadius: T.rMd, padding:'6px 8px' }}>
+                  <div style={{ fontFamily: T.fontDisplay, fontSize:22, fontWeight:700,
+                                lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{n}</div>
+                  <div style={{ fontFamily: T.fontSans, fontSize:10, color: T.ink3, marginTop:2,
+                                textTransform:'uppercase', letterSpacing:'.08em' }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ─── Overview ────────────────────────────────────────────────────────────────
+
+function HifiOverview({ days, onSelectDay }) {
+  const { tokens: T, sentTone, Eyebrow, SectionHeader, Ticker, SentBadge, SentDot, PriorityMark, CatLabel } = window.HF;
+
+  const allArticles = days.flatMap(d => d.articles.map(a => ({ ...a, _day: d.dateShort, _dayKey: d.dateKey })));
+  const totalP1   = allArticles.filter(a => a.priority === 'P1').length;
+  const totalBull = allArticles.filter(a => a.sentiment === 'bull').length;
+  const totalBear = allArticles.filter(a => a.sentiment === 'bear').length;
+
+  const tickerCounts = {};
+  allArticles.forEach(a => a.tickers.forEach(t => { tickerCounts[t] = (tickerCounts[t]||0) + 1; }));
+  const topTickers = Object.entries(tickerCounts).sort((a,b) => b[1]-a[1]).slice(0,16);
+
+  const topP1 = allArticles.filter(a => a.priority === 'P1').slice(0,5);
+
+  const themeCounts = {};
+  days.forEach(d => d.digest.themes.forEach(t => { themeCounts[t] = (themeCounts[t]||0) + 1; }));
+  const themes = Object.entries(themeCounts).sort((a,b) => b[1]-a[1]);
+
+  const dateRange = days.length >= 2
+    ? `${days[days.length-1].dateShort} — ${days[0].dateShort}`
+    : days[0]?.dateShort || '';
+
+  const LegendDot = ({ c }) => (
+    <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%',
+                   background:c, marginRight:4, verticalAlign:'middle' }}/>
+  );
+
+  return (
+    <div style={{ background: T.paper, height:'100%', overflow:'auto',
+                  fontFamily: T.fontSans, color: T.ink1,
+                  display:'flex', flexDirection:'column' }}>
+      <header style={{ padding:'14px 28px 12px', borderBottom:`1px solid ${T.rule2}`, background: T.paper }}>
+        <Eyebrow style={{ color: T.accent }}>{days.length}-day overview · {dateRange}</Eyebrow>
+        <h1 style={{ fontFamily: T.fontDisplay, fontWeight:700, fontSize:30, lineHeight:1.05,
+                     margin:'4px 0 0', letterSpacing:'-.015em', color: T.ink0 }}>
+          The week in markets, distilled
+        </h1>
+        <div style={{ display:'flex', alignItems:'center', gap:18, marginTop:8,
+                      fontFamily: T.fontSans, fontSize:12, color: T.ink2 }}>
+          {[['ink0', allArticles.length, 'stories'],
+            ['p1',   totalP1,           'P1 priority'],
+            ['bull', totalBull,         'bullish'],
+            ['bear', totalBear,         'bearish'],
+            ['ink0', Object.keys(tickerCounts).length, 'unique tickers'],
+          ].map(([clr, n, lbl]) => (
+            <span key={lbl}>
+              <b style={{ fontFamily: T.fontDisplay, fontSize:17, fontWeight:700, color: T[clr] }}>{n}</b>
+              {' '}<span style={{ color: T.ink3 }}>{lbl}</span>
+            </span>
+          ))}
+        </div>
+      </header>
+
+      <div style={{ padding:'18px 28px 24px', display:'flex', flexDirection:'column', gap:22 }}>
+        {/* Day cards */}
+        <section>
+          <SectionHeader label="Day by day · click any to drill in"/>
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${days.length}, 1fr)`, gap:10 }}>
+            {days.map(d => {
+              const mc = d.mood==='bull' ? T.bull : d.mood==='bear' ? T.bear :
+                         d.mood==='mixed' ? T.mixed : T.neutral;
+              const bull = d.articles.filter(a => a.sentiment==='bull').length;
+              const bear = d.articles.filter(a => a.sentiment==='bear').length;
+              return (
+                <button key={d.dateKey} onClick={() => onSelectDay(d.dateKey)}
+                  style={{ textAlign:'left', background: T.surface, fontFamily: T.fontSans,
+                           border:`1px solid ${T.rule2}`, borderTop:`3px solid ${mc}`,
+                           borderRadius: T.rMd, padding:'12px', cursor:'pointer',
+                           display:'flex', flexDirection:'column', gap:6, color: T.ink1 }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 14px rgba(0,0,0,.06)'}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontFamily: T.fontDisplay, fontSize:18, fontWeight:700, color: T.ink0 }}>
+                      {d.dateShort}
+                    </span>
+                    <SentBadge s={d.mood==='neutral' ? null : d.mood} size={9}/>
+                  </div>
+                  <Eyebrow style={{ color: T.ink3 }}>{d.stats.total} stories · {d.stats.p12} priority</Eyebrow>
+                  <p style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:13.5,
+                               lineHeight:1.25, margin:0, color: T.ink0,
+                               display:'-webkit-box', WebkitLineClamp:3,
+                               WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+                    {d.digest.body ? d.digest.body.substring(0,140) + '…' : `${d.dateShort} market brief`}
+                  </p>
+                  <div style={{ display:'flex', gap:8, marginTop:'auto', paddingTop:4,
+                                fontFamily: T.fontMono, fontSize:10, color: T.ink2 }}>
+                    <span style={{ color: T.bull }}>↑ {bull}</span>
+                    <span style={{ color: T.bear }}>↓ {bear}</span>
+                    <span style={{ color: T.ink3, marginLeft:'auto' }}>open →</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Trajectory + heatmap */}
+        <section style={{ display:'grid', gridTemplateColumns:'1.1fr 1fr', gap:22 }}>
+          <div>
+            <SectionHeader label="Mood trajectory · stories per day"/>
+            <div style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                          borderRadius: T.rMd, padding:'14px 14px 10px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(${days.length},1fr)`,
+                            gap:8, alignItems:'flex-end', height:200 }}>
+                {[...days].reverse().map(d => {
+                  const bull  = d.articles.filter(a => a.sentiment==='bull').length;
+                  const bear  = d.articles.filter(a => a.sentiment==='bear').length;
+                  const mixed = d.articles.filter(a => a.sentiment==='mixed').length;
+                  const total = d.stats.total;
+                  const maxV  = Math.max(...days.map(x => x.stats.total), 1);
+                  const h = (total / maxV) * 170;
+                  const segH = n => total ? (n / total) * h : 0;
+                  const mc = d.mood==='bull' ? T.bull : d.mood==='bear' ? T.bear :
+                             d.mood==='mixed' ? T.mixed : T.neutral;
+                  return (
+                    <button key={d.dateKey} onClick={() => onSelectDay(d.dateKey)}
+                      style={{ background:'transparent', border:0, padding:0, cursor:'pointer',
+                               display:'flex', flexDirection:'column', alignItems:'center',
+                               gap:4, height:'100%', justifyContent:'flex-end' }}>
+                      <span style={{ fontFamily: T.fontMono, fontSize:11, color: T.ink2, fontWeight:600 }}>{total}</span>
+                      <div style={{ width:'70%', display:'flex', flexDirection:'column',
+                                    justifyContent:'flex-end', overflow:'hidden', borderRadius:2,
+                                    boxShadow:`inset 0 0 0 1px ${T.rule2}` }}>
+                        {bear  > 0 && <div style={{ height: segH(bear),  background: T.bear  }}/>}
+                        {mixed > 0 && <div style={{ height: segH(mixed), background: T.mixed }}/>}
+                        {bull  > 0 && <div style={{ height: segH(bull),  background: T.bull  }}/>}
+                      </div>
+                      <div style={{ fontFamily: T.fontDisplay, fontSize:14, fontWeight:600, color: T.ink1 }}>
+                        {d.dateShort}
+                      </div>
+                      <div style={{ width:10, height:10, background: mc, borderRadius:'50%' }}/>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                            marginTop:10, paddingTop:8, borderTop:`1px solid ${T.rule}`,
+                            fontFamily: T.fontSans, fontSize:11, color: T.ink3 }}>
+                <span>oldest →</span>
+                <span style={{ display:'flex', gap:10 }}>
+                  <span><LegendDot c={T.bull}/>bull</span>
+                  <span><LegendDot c={T.mixed}/>mixed</span>
+                  <span><LegendDot c={T.bear}/>bear</span>
+                </span>
+                <span>← newest</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <SectionHeader label="Activity heatmap · day × category"/>
+            <div style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                          borderRadius: T.rMd, padding:'10px 12px' }}>
+              <div style={{ display:'grid',
+                            gridTemplateColumns:`100px repeat(${days.length},1fr)`,
+                            gap:3, fontFamily: T.fontMono, fontSize:10, color: T.ink3 }}>
+                <div/>
+                {[...days].reverse().map(d => (
+                  <div key={d.dateKey} style={{ textAlign:'center', padding:'2px 0' }}>
+                    {d.dateShort}
+                  </div>
+                ))}
+                {window.NEWS_DATA.categories.map(c => {
+                  const row = [...days].reverse().map(d =>
+                    d.articles.filter(a => a.cats.includes(c))
+                  );
+                  const maxV = Math.max(...row.map(a => a.length), 1);
+                  return (
+                    <React.Fragment key={c}>
+                      <div style={{ fontFamily: T.fontSans, fontSize:11, color: T.ink2,
+                                    fontWeight:500, padding:'0 4px',
+                                    display:'flex', alignItems:'center', justifyContent:'flex-end',
+                                    overflow:'hidden', whiteSpace:'nowrap' }}>{c}</div>
+                      {row.map((arts, ci) => {
+                        if (!arts.length) return (
+                          <div key={ci} style={{ height:26, background: T.surface, border:`1px solid ${T.rule2}` }}/>
+                        );
+                        const bull = arts.filter(a => a.sentiment==='bull').length;
+                        const bear = arts.filter(a => a.sentiment==='bear').length;
+                        const dom  = bull >= bear ? 'bull' : 'bear';
+                        const fg   = dom==='bull' ? T.bull : T.bear;
+                        const intensity = 0.25 + 0.75 * (arts.length / maxV);
+                        const hasP1 = arts.some(a => a.priority==='P1');
+                        return (
+                          <div key={ci} style={{ height:26, position:'relative',
+                                                  background:`color-mix(in oklab,${fg} ${Math.round(intensity*100)}%,transparent)`,
+                                                  border:`1px solid ${T.rule2}`,
+                                                  display:'flex', alignItems:'center', justifyContent:'center',
+                                                  fontFamily: T.fontMono, fontSize:11, fontWeight:700,
+                                                  color:'#fff', cursor:'pointer' }}>
+                            {arts.length}
+                            {hasP1 && <span style={{ position:'absolute', top:2, right:3,
+                                                      width:4, height:4, background:'#fff', borderRadius:'50%' }}/>}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Top stories + tickers + themes */}
+        <section style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr 1fr', gap:22 }}>
+          <div>
+            <SectionHeader label="This week's biggest stories"/>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {topP1.map(a => {
+                const tone = sentTone(a.sentiment);
+                return (
+                  <article key={a.id} style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                                               borderRadius: T.rMd, padding:'10px 12px',
+                                               boxShadow:`inset 3px 0 0 0 ${T.p1}`, paddingLeft:15 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                      <PriorityMark p={a.priority} size={14}/>
+                      <button onClick={() => onSelectDay(a._dayKey)}
+                        style={{ fontFamily: T.fontMono, fontSize:11, fontWeight:700,
+                                 color: T.accent, background:'transparent', border:0,
+                                 padding:0, cursor:'pointer' }}>{a._day}</button>
+                      <span style={{ width:3, height:3, borderRadius:'50%', background: T.ink4 }}/>
+                      <span style={{ fontFamily: T.fontMono, fontSize:11, color: T.ink2 }}>{a.time}</span>
+                      <div style={{ flex:1 }}/>
+                      <SentBadge s={a.sentiment} size={9}/>
+                    </div>
+                    <h3 style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:15, lineHeight:1.25,
+                                 margin:'0 0 4px', color: T.ink0 }}>{a.headline}</h3>
+                    <p style={{ fontFamily: T.fontSerif, fontSize:12.5, lineHeight:1.45,
+                                color: T.ink2, margin:0 }}>{a.summary}</p>
+                    <div style={{ display:'flex', gap:3, marginTop:6, flexWrap:'wrap' }}>
+                      {a.cats.slice(0,2).map(c => <CatLabel key={c} c={c}/>)}
+                      <div style={{ flex:1 }}/>
+                      {a.tickers.slice(0,4).map(t => <Ticker key={t} t={t} size={10}/>)}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <SectionHeader label="Top tickers · week"/>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+              {topTickers.map(([t, n]) => {
+                const sz = n >= 4 ? 14 : n >= 3 ? 12.5 : n >= 2 ? 11 : 10;
+                return (
+                  <span key={t} style={{ display:'inline-flex', alignItems:'center', gap:5,
+                                          fontFamily: T.fontMono, fontSize:sz, fontWeight:600,
+                                          background: T.surface, border:`1px solid ${T.rule2}`,
+                                          borderRadius:3, padding:'3px 7px' }}>
+                    {t}
+                    <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
+                                   color: T.ink3, background: T.paperSub,
+                                   padding:'0 5px', borderRadius:8 }}>{n}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <SectionHeader label="Themes of the week"/>
+            <div style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                          borderRadius: T.rMd, padding:'12px',
+                          display:'flex', flexWrap:'wrap', gap:6, alignItems:'center' }}>
+              {themes.map(([t, n]) => {
+                const sz = n >= 3 ? 17 : n >= 2 ? 14 : 12;
+                return (
+                  <span key={t} style={{ fontFamily: T.fontDisplay,
+                                          fontSize:sz, fontWeight: n >= 2 ? 700 : 600,
+                                          color: n >= 2 ? T.ink0 : T.ink2,
+                                          letterSpacing:'-.005em',
+                                          display:'inline-flex', alignItems:'baseline', gap:4 }}>
+                    {t}
+                    {n > 1 && (
+                      <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
+                                     color: T.accent, verticalAlign:'super' }}>×{n}</span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mobile components ───────────────────────────────────────────────────────
+
+function SignalIcon() { return (<svg width="16" height="11" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="0.5"/><rect x="5" y="5" width="3" height="7" rx="0.5"/><rect x="10" y="2" width="3" height="10" rx="0.5"/><rect x="15" y="0" width="3" height="12" rx="0.5"/></svg>); }
+function WifiIcon()   { return (<svg width="14" height="11" viewBox="0 0 18 12" fill="none"><path d="M1 4.5C3 2 6 1 9 1s6 1 8 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><path d="M3.5 7c1.5-1.5 3.5-2 5.5-2s4 .5 5.5 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="9" cy="10" r="1.2" fill="currentColor"/></svg>); }
+function BatteryIcon(){ return (<svg width="24" height="11" viewBox="0 0 26 12" fill="none"><rect x="0.5" y="0.5" width="22" height="11" rx="2.5" stroke="currentColor"/><rect x="2" y="2" width="18" height="8" rx="1.5" fill="currentColor"/><rect x="23" y="3.5" width="1.8" height="5" rx=".8" fill="currentColor"/></svg>); }
+function SearchIconSm(){ return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.7"/><path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>); }
+function BookmarkIconSm(){ return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16l7-4 7 4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/></svg>); }
+function ChevIcon({ open, T }) { return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ color: T.ink3, transform: open ? 'rotate(180deg)' : 'rotate(0)', transition:'transform .15s' }}><path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>); }
+function IconBtnSm({ children }) {
+  const { tokens: T } = window.HF;
+  return (<button style={{ width:28, height:28, display:'inline-flex', alignItems:'center', justifyContent:'center', background:'transparent', border:'none', color: T.ink2, cursor:'pointer' }}>{children}</button>);
+}
+
+function MiniSpark({ D }) {
+  const { tokens: T } = window.HF;
+  const hrs = D.articles.map(a => a.hr);
+  if (!hrs.length) return null;
+  const HSTART = Math.min(...hrs);
+  const HEND   = Math.max(...hrs);
+  const span   = HEND - HSTART + 1;
+  const bars   = Array.from({ length: span }, (_, i) => {
+    const arts = D.articles.filter(a => a.hr === i + HSTART);
+    return { bull: arts.filter(a=>a.sentiment==='bull').length,
+             bear: arts.filter(a=>a.sentiment==='bear').length,
+             mixed: arts.filter(a=>a.sentiment==='mixed').length };
+  });
+  const maxV = Math.max(...bars.map(b => b.bull+b.bear+b.mixed), 1);
+  return (
+    <div>
+      <div style={{ display:'flex', gap:2, alignItems:'flex-end', height:32 }}>
+        {bars.map((b,i) => (
+          <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+            {b.bear  > 0 && <div style={{ background: T.bear,  height:(b.bear/maxV)*28 }}/>}
+            {b.mixed > 0 && <div style={{ background: T.mixed, height:(b.mixed/maxV)*28 }}/>}
+            {b.bull  > 0 && <div style={{ background: T.bull,  height:(b.bull/maxV)*28 }}/>}
+          </div>
+        ))}
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between',
+                    fontFamily: T.fontMono, fontSize:9, color: T.ink3, marginTop:3 }}>
+        <span>{String(HSTART).padStart(2,'0')}</span>
+        <span>{String(Math.floor((HSTART+HEND)/2)).padStart(2,'0')}</span>
+        <span>{String(HEND).padStart(2,'0')}</span>
+      </div>
+    </div>
+  );
+}
+
+function MobileRow({ a, defaultOpen }) {
+  const { tokens: T, sentTone, SentDot, SentBadge, PriorityMark, CatLabel, Ticker, Eyebrow } = window.HF;
+  const [open, setOpen] = React.useState(!!defaultOpen);
+  const tone = sentTone(a.sentiment);
+  return (
+    <div onClick={() => setOpen(o => !o)}
+      style={{ padding:'10px 14px 10px 16px', borderBottom:`1px solid ${T.rule}`,
+               borderLeft: a.priority==='P1' ? `3px solid ${T.p1}` :
+                           a.priority==='P2' ? `3px solid ${T.p2}` : `3px solid transparent`,
+               background: open ? T.paperAlt : T.surface, cursor:'pointer' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5, flexWrap:'wrap' }}>
+        <PriorityMark p={a.priority} size={14}/>
+        <span style={{ fontFamily: T.fontMono, fontSize:10.5, color: T.ink2,
+                       fontVariantNumeric:'tabular-nums' }}>{a.time}</span>
+        <span style={{ width:3, height:3, borderRadius:'50%', background: T.ink4 }}/>
+        <span style={{ fontFamily: T.fontSans, fontSize:10.5, color: T.ink2 }}>{a.source}</span>
+        <SentDot s={a.sentiment}/>
+        <span style={{ fontFamily: T.fontSans, fontSize:9.5, fontWeight:600, color: tone.fg,
+                       textTransform:'uppercase', letterSpacing:'.08em' }}>{tone.label}</span>
+        <div style={{ flex:1 }}/>
+        <ChevIcon open={open} T={T}/>
+      </div>
+      {a.url ? (
+        <a href={a.url} target="_blank" rel="noopener noreferrer"
+           onClick={e => e.stopPropagation()}
+           style={{ textDecoration:'none', color:'inherit', display:'block' }}>
+          <div style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:15, lineHeight:1.25,
+                        color: T.ink0, letterSpacing:'-.005em' }}>{a.headline}</div>
+        </a>
+      ) : (
+        <div style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:15, lineHeight:1.25,
+                      color: T.ink0, letterSpacing:'-.005em' }}>{a.headline}</div>
+      )}
+      <div style={{ display:'flex', gap:3, marginTop:5, flexWrap:'wrap' }}>
+        {a.cats.slice(0,3).map(c => <CatLabel key={c} c={c}/>)}
+      </div>
+      {open && (
+        <div onClick={e => e.stopPropagation()}
+          style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${T.rule}` }}>
+          <p style={{ fontFamily: T.fontSerif, fontSize:13, lineHeight:1.5,
+                      color: T.ink2, margin:'0 0 10px' }}>{a.summary}</p>
+          {a.implication && (
+            <div style={{ display:'flex', alignItems:'flex-start', gap:6,
+                          background: tone.sub, border:`1px solid ${tone.bg}`,
+                          padding:'7px 10px', borderRadius: T.rSm, marginBottom:10 }}>
+              <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:700,
+                             color: tone.fg, textTransform:'uppercase', letterSpacing:'.1em',
+                             flexShrink:0, paddingTop:1 }}>Impl</span>
+              <span style={{ fontFamily: T.fontSerif, fontSize:12, color: T.ink1,
+                             fontStyle:'italic', lineHeight:1.4 }}>{a.implication}</span>
+            </div>
+          )}
+          <div style={{ marginBottom:10 }}>
+            <Eyebrow style={{ fontSize:9, color: T.ink3, marginBottom:4, display:'block' }}>Affected</Eyebrow>
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+              {a.tickers.map(t => <Ticker key={t} t={t} size={11}/>)}
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={e => e.stopPropagation()}
+              style={{ flex:1, padding:'8px', fontFamily: T.fontSans, fontSize:12, fontWeight:600,
+                       background: T.surface, color: T.ink1,
+                       border:`1px solid ${T.rule2}`, borderRadius: T.rMd, cursor:'pointer',
+                       display:'inline-flex', justifyContent:'center', alignItems:'center', gap:5 }}>
+              <BookmarkIconSm/> Save
+            </button>
+            {a.url && (
+              <a href={a.url} target="_blank" rel="noopener noreferrer"
+                 onClick={e => e.stopPropagation()}
+                 style={{ flex:1, padding:'8px', fontFamily: T.fontSans, fontSize:12, fontWeight:600,
+                          background: T.ink1, color: T.paper,
+                          border:`1px solid ${T.ink1}`, borderRadius: T.rMd,
+                          display:'inline-flex', justifyContent:'center', alignItems:'center', gap:5,
+                          textDecoration:'none' }}>
+                Read full
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileDayView({ day }) {
+  const { tokens: T, moodColor, moodLabel, Eyebrow, CatLabel, Chip } = window.HF;
+  const D = day;
+  const [searchQ, setSearchQ] = React.useState('');
+  const [prio,    setPrio]    = React.useState(null);
+  const [sent,    setSent]    = React.useState(null);
+  const [cat,     setCat]     = React.useState(null);
+
+  const filtered = React.useMemo(() => {
+    const q = searchQ.trim().toLowerCase();
+    return D.articles.filter(a => {
+      if (prio && a.priority !== prio) return false;
+      if (sent && a.sentiment !== sent) return false;
+      if (cat  && !a.cats.includes(cat)) return false;
+      if (q) {
+        const blob = [a.headline, a.summary, ...a.tickers, ...a.cats, a.source].join(' ').toLowerCase();
+        if (!blob.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [D.articles, searchQ, prio, sent, cat]);
+
+  const mc = moodColor(D.mood);
+  const ml = moodLabel(D.mood);
+
+  return (
+    <div style={{ height:'100%', overflow:'auto', background: T.paper }}>
+      <div style={{ padding:'12px 16px 10px', background: T.paper, borderBottom:`1px solid ${T.rule}` }}>
+        <Eyebrow>{D.date} · refreshed {D.refreshed}</Eyebrow>
+        <div style={{ display:'flex', alignItems:'baseline', gap:8, marginTop:4 }}>
+          <span style={{ fontFamily: T.fontDisplay, fontSize:24, fontWeight:700,
+                         color: T.ink0, letterSpacing:'-.02em', lineHeight:1 }}>Daily brief</span>
+          <span style={{ fontFamily: T.fontDisplay, fontSize:18, fontWeight:600,
+                         color: mc, fontStyle:'italic', lineHeight:1 }}>{ml}</span>
+          <span style={{ width:7, height:7, borderRadius:'50%', background: mc }}/>
+        </div>
+        <div style={{ display:'flex', gap:10, marginTop:6,
+                      fontFamily: T.fontMono, fontSize:10.5, color: T.ink2 }}>
+          <span><b style={{ color: T.ink0 }}>{D.stats.total}</b> stories</span>
+          <span><b style={{ color: T.p1 }}>{D.stats.p12}</b> priority</span>
+          <span><b style={{ color: T.bull }}>↑{D.articles.filter(a=>a.sentiment==='bull').length}</b></span>
+          <span><b style={{ color: T.bear }}>↓{D.articles.filter(a=>a.sentiment==='bear').length}</b></span>
+        </div>
+      </div>
+
+      {D.digest.body && (
+        <section style={{ padding:'12px 16px', background: T.paper, borderBottom:`1px solid ${T.rule2}` }}>
+          <Eyebrow style={{ color: T.accent }}>AI Digest</Eyebrow>
+          <p style={{ fontFamily: T.fontSerif, fontSize:13, lineHeight:1.5,
+                      color: T.ink1, margin:'4px 0 6px' }}>{D.digest.body}</p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:3 }}>
+            {D.digest.themes.map(t => <span key={t} style={{ whiteSpace:'nowrap' }}><CatLabel c={t}/></span>)}
+          </div>
+        </section>
+      )}
+
+      <section style={{ padding:'10px 16px', background: T.surface, borderBottom:`1px solid ${T.rule}` }}>
+        <Eyebrow>By the hour</Eyebrow>
+        <div style={{ marginTop:6 }}><MiniSpark D={D}/></div>
+      </section>
+
+      <div style={{ padding:'8px 12px', background: T.paper, borderBottom:`1px solid ${T.rule2}` }}>
+        <div style={{ position:'relative', marginBottom:6 }}>
+          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                 placeholder="Search headlines, tickers…"
+                 style={{ width:'100%', padding:'7px 28px 7px 28px',
+                          fontFamily: T.fontSans, fontSize:12,
+                          background: T.surface, color: T.ink1,
+                          border:`1px solid ${searchQ ? T.accent : T.rule2}`,
+                          borderRadius:999, outline:'none' }}/>
+          <span style={{ position:'absolute', left:9, top:6, color: searchQ ? T.accent : T.ink3 }}>
+            <SearchIconSm/>
+          </span>
+          {searchQ && (
+            <button onClick={() => setSearchQ('')}
+              style={{ position:'absolute', right:5, top:4, width:20, height:20,
+                       borderRadius:'50%', background: T.paperSub, color: T.ink2,
+                       border:0, fontSize:12, lineHeight:1, cursor:'pointer' }}>×</button>
+          )}
+        </div>
+        <div style={{ display:'flex', gap:4, overflowX:'auto', whiteSpace:'nowrap', paddingBottom:2 }}>
+          <Chip on={!cat && !prio && !sent} onClick={() => { setCat(null); setPrio(null); setSent(null); }}>All</Chip>
+          <Chip on={prio==='P1'} onClick={() => setPrio(prio==='P1' ? null : 'P1')}>P1</Chip>
+          <Chip on={prio==='P2'} onClick={() => setPrio(prio==='P2' ? null : 'P2')}>P2</Chip>
+          <Chip on={sent==='bull'} onClick={() => setSent(sent==='bull' ? null : 'bull')}>Bull</Chip>
+          <Chip on={sent==='bear'} onClick={() => setSent(sent==='bear' ? null : 'bear')}>Bear</Chip>
+          {window.NEWS_DATA.categories.map(c => (
+            <Chip key={c} on={cat===c} onClick={() => setCat(cat===c ? null : c)}>{c}</Chip>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ background: T.surface }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding:'40px 16px', textAlign:'center', color: T.ink3 }}>
+            <div style={{ fontFamily: T.fontDisplay, fontSize:16, fontWeight:600,
+                          color: T.ink2, fontStyle:'italic', marginBottom:4 }}>No stories match.</div>
+            <button onClick={() => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); }}
+              style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
+                       color: T.accent, background:'transparent', border:0, cursor:'pointer' }}>Clear filters →</button>
+          </div>
+        ) : (
+          filtered.map((a) => <MobileRow key={a.id} a={a} defaultOpen={false}/>)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MobileOverview({ days, onSelectDay }) {
+  const { tokens: T, Eyebrow, SectionHeader, SentBadge, PriorityMark, CatLabel, Ticker, sentTone } = window.HF;
+  const allArticles = days.flatMap(d => d.articles.map(a => ({ ...a, _day: d.dateShort, _dayKey: d.dateKey })));
+  const totalP1   = allArticles.filter(a => a.priority==='P1').length;
+  const totalBull = allArticles.filter(a => a.sentiment==='bull').length;
+  const totalBear = allArticles.filter(a => a.sentiment==='bear').length;
+  const tickerCounts = {};
+  allArticles.forEach(a => a.tickers.forEach(t => { tickerCounts[t] = (tickerCounts[t]||0) + 1; }));
+  const topTickers = Object.entries(tickerCounts).sort((a,b) => b[1]-a[1]).slice(0,12);
+  const topP1 = allArticles.filter(a => a.priority==='P1').slice(0,4);
+  const themeCounts = {};
+  days.forEach(d => d.digest.themes.forEach(t => { themeCounts[t] = (themeCounts[t]||0) + 1; }));
+  const themes = Object.entries(themeCounts).sort((a,b) => b[1]-a[1]);
+  const dateRange = days.length >= 2
+    ? `${days[days.length-1].dateShort} — ${days[0].dateShort}`
+    : days[0]?.dateShort || '';
+  const MTDot = ({ c }) => (
+    <span style={{ display:'inline-block', width:6, height:6, borderRadius:'50%',
+                   background:c, marginRight:3, verticalAlign:'middle' }}/>
+  );
+
+  return (
+    <div style={{ height:'100%', overflow:'auto', background: T.paper }}>
+      <header style={{ padding:'14px 16px 12px', background: T.paper, borderBottom:`1px solid ${T.rule2}` }}>
+        <Eyebrow style={{ color: T.accent }}>{days.length}-day overview · {dateRange}</Eyebrow>
+        <h1 style={{ fontFamily: T.fontDisplay, fontWeight:700, fontSize:22, lineHeight:1.1,
+                     margin:'4px 0 6px', letterSpacing:'-.015em', color: T.ink0 }}>
+          The week in markets,<br/>distilled
+        </h1>
+        <div style={{ display:'flex', gap:12, fontFamily: T.fontSans, fontSize:11, color: T.ink2 }}>
+          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.ink0 }}>{allArticles.length}</b> <span style={{ color: T.ink3 }}>stories</span></span>
+          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.p1 }}>{totalP1}</b> <span style={{ color: T.ink3 }}>P1</span></span>
+          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.bull }}>{totalBull}</b> <span style={{ color: T.ink3 }}>↑</span></span>
+          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.bear }}>{totalBear}</b> <span style={{ color: T.ink3 }}>↓</span></span>
+        </div>
+      </header>
+
+      {/* Mood trajectory */}
+      <section style={{ padding:'12px 16px', background: T.surface, borderBottom:`1px solid ${T.rule}` }}>
+        <SectionHeader label="Mood trajectory"/>
+        <div>
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${days.length},1fr)`,
+                        gap:6, alignItems:'flex-end', height:70 }}>
+            {[...days].reverse().map(d => {
+              const bull  = d.articles.filter(a=>a.sentiment==='bull').length;
+              const bear  = d.articles.filter(a=>a.sentiment==='bear').length;
+              const mixed = d.articles.filter(a=>a.sentiment==='mixed').length;
+              const total = d.stats.total;
+              const maxV  = Math.max(...days.map(x=>x.stats.total), 1);
+              const h     = (total / maxV) * 66;
+              const segH  = n => total ? (n / total) * h : 0;
+              return (
+                <button key={d.dateKey} onClick={() => onSelectDay(d.dateKey)}
+                  style={{ background:'transparent', border:0, padding:0, cursor:'pointer',
+                           display:'flex', flexDirection:'column', alignItems:'center',
+                           gap:2, justifyContent:'flex-end', height:'100%' }}>
+                  <span style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink2, fontWeight:600 }}>{total}</span>
+                  <div style={{ width:'70%', display:'flex', flexDirection:'column',
+                                justifyContent:'flex-end', overflow:'hidden', borderRadius:2,
+                                boxShadow:`inset 0 0 0 1px ${T.rule2}` }}>
+                    {bear  > 0 && <div style={{ height: segH(bear),  background: T.bear  }}/>}
+                    {mixed > 0 && <div style={{ height: segH(mixed), background: T.mixed }}/>}
+                    {bull  > 0 && <div style={{ height: segH(bull),  background: T.bull  }}/>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:`repeat(${days.length},1fr)`,
+                        gap:6, marginTop:5, fontFamily: T.fontDisplay, fontSize:12,
+                        fontWeight:600, color: T.ink1, textAlign:'center' }}>
+            {[...days].reverse().map(d => {
+              const mc = d.mood==='bull' ? T.bull : d.mood==='bear' ? T.bear :
+                         d.mood==='mixed' ? T.mixed : T.neutral;
+              return (
+                <div key={d.dateKey}>
+                  {d.dateShort}
+                  <div style={{ marginTop:2, width:8, height:8, borderRadius:'50%',
+                                background: mc, marginLeft:'auto', marginRight:'auto' }}/>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:6,
+                        fontFamily: T.fontSans, fontSize:9.5, color: T.ink3 }}>
+            <span>oldest</span>
+            <span style={{ display:'flex', gap:7 }}>
+              <span><MTDot c={T.bull}/>bull</span>
+              <span><MTDot c={T.mixed}/>mix</span>
+              <span><MTDot c={T.bear}/>bear</span>
+            </span>
+            <span>newest</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Day cards */}
+      <section style={{ padding:'12px 16px', background: T.paper, borderBottom:`1px solid ${T.rule}` }}>
+        <SectionHeader label="Day by day · tap to open"/>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {days.map(d => {
+            const mc = d.mood==='bull' ? T.bull : d.mood==='bear' ? T.bear :
+                       d.mood==='mixed' ? T.mixed : T.neutral;
+            const bull = d.articles.filter(a=>a.sentiment==='bull').length;
+            const bear = d.articles.filter(a=>a.sentiment==='bear').length;
+            return (
+              <button key={d.dateKey} onClick={() => onSelectDay(d.dateKey)}
+                style={{ textAlign:'left', background: T.surface,
+                         border:`1px solid ${T.rule2}`, borderLeft:`4px solid ${mc}`,
+                         borderRadius: T.rMd, padding:'10px 12px', cursor:'pointer',
+                         display:'flex', flexDirection:'column', gap:4,
+                         fontFamily: T.fontSans, color: T.ink1, width:'100%' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontFamily: T.fontDisplay, fontSize:16, fontWeight:700, color: T.ink0 }}>
+                    {d.dateShort}
+                  </span>
+                  <SentBadge s={d.mood==='neutral' ? null : d.mood} size={9}/>
+                  <div style={{ flex:1 }}/>
+                  <span style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink3 }}>
+                    {d.stats.total} · {d.stats.p12} P
+                  </span>
+                </div>
+                <p style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:13.5,
+                             lineHeight:1.25, margin:0, color: T.ink0,
+                             display:'-webkit-box', WebkitLineClamp:2,
+                             WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+                  {d.digest.body ? d.digest.body.substring(0,120) + '…' : `${d.dateShort} market brief`}
+                </p>
+                <div style={{ display:'flex', gap:8, fontFamily: T.fontMono, fontSize:10, color: T.ink2 }}>
+                  <span style={{ color: T.bull }}>↑ {bull}</span>
+                  <span style={{ color: T.bear }}>↓ {bear}</span>
+                  <span style={{ color: T.ink3, marginLeft:'auto' }}>open →</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Top P1 */}
+      <section style={{ padding:'12px 16px', background: T.surface, borderBottom:`1px solid ${T.rule}` }}>
+        <SectionHeader label="This week's biggest stories"/>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {topP1.map(a => {
+            const tone = sentTone(a.sentiment);
+            return (
+              <article key={a.id} style={{ background: T.surface, border:`1px solid ${T.rule2}`,
+                                           borderRadius: T.rMd, padding:'8px 10px',
+                                           boxShadow:`inset 3px 0 0 0 ${T.p1}`, paddingLeft:13 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                  <PriorityMark p={a.priority} size={13}/>
+                  <button onClick={() => onSelectDay(a._dayKey)}
+                    style={{ fontFamily: T.fontMono, fontSize:10.5, fontWeight:700,
+                             color: T.accent, background:'transparent', border:0,
+                             padding:0, cursor:'pointer' }}>{a._day}</button>
+                  <span style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink2 }}>· {a.time}</span>
+                  <div style={{ flex:1 }}/>
+                  <SentBadge s={a.sentiment} size={8}/>
+                </div>
+                <h3 style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:13.5,
+                             lineHeight:1.25, margin:'0 0 3px', color: T.ink0 }}>{a.headline}</h3>
+                <p style={{ fontFamily: T.fontSerif, fontSize:11.5, lineHeight:1.4,
+                            color: T.ink2, margin:0,
+                            display:'-webkit-box', WebkitLineClamp:2,
+                            WebkitBoxOrient:'vertical', overflow:'hidden' }}>{a.summary}</p>
+                <div style={{ display:'flex', gap:3, marginTop:5, flexWrap:'wrap' }}>
+                  {a.tickers.slice(0,4).map(t => <Ticker key={t} t={t} size={10}/>)}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Top tickers */}
+      <section style={{ padding:'12px 16px', background: T.paper, borderBottom:`1px solid ${T.rule}` }}>
+        <SectionHeader label="Top tickers · week"/>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+          {topTickers.map(([t, n]) => {
+            const sz = n >= 4 ? 13 : n >= 3 ? 12 : 11;
+            return (
+              <span key={t} style={{ display:'inline-flex', alignItems:'center', gap:4,
+                                      fontFamily: T.fontMono, fontSize:sz, fontWeight:600,
+                                      background: T.surface, border:`1px solid ${T.rule2}`,
+                                      borderRadius:3, padding:'3px 6px' }}>
+                {t}
+                <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
+                               color: T.ink3, background: T.paperSub,
+                               padding:'0 4px', borderRadius:8 }}>{n}</span>
+              </span>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Themes */}
+      <section style={{ padding:'12px 16px 32px', background: T.surface }}>
+        <SectionHeader label="Themes of the week"/>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:6, alignItems:'baseline' }}>
+          {themes.map(([t, n]) => {
+            const sz = n >= 3 ? 16 : n >= 2 ? 14 : 12;
+            return (
+              <span key={t} style={{ fontFamily: T.fontDisplay, fontSize:sz,
+                                      fontWeight: n >= 2 ? 700 : 600,
+                                      color: n >= 2 ? T.ink0 : T.ink2,
+                                      letterSpacing:'-.005em',
+                                      display:'inline-flex', alignItems:'baseline', gap:3 }}>
+                {t}
+                {n > 1 && <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
+                                         color: T.accent, verticalAlign:'super' }}>×{n}</span>}
+              </span>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HifiMobile() {
+  const { tokens: T, Eyebrow } = window.HF;
+  const days = window.NEWS_DATA.days;
+  const [activeTab, setActiveTab] = React.useState('overview');
+  const nowStr = new Date().toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:false });
+
+  const MobileTab = ({ label, unit, eyebrow, active, onClick, accent, mood }) => {
+    const mc = mood==='bull' ? T.bull : mood==='bear' ? T.bear :
+               mood==='mixed' ? T.mixed : mood==='neutral' ? T.neutral : T.accent;
+    return (
+      <button onClick={onClick} style={{ background:'transparent', border:0, cursor:'pointer',
+                                          padding:'6px 10px 8px',
+                                          borderBottom:`2px solid ${active ? (accent ? T.accent : T.ink0) : 'transparent'}`,
+                                          display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1,
+                                          flexShrink:0 }}>
+        <span style={{ fontFamily: T.fontSans, fontSize:8, fontWeight:600,
+                       textTransform:'uppercase', letterSpacing:'.1em',
+                       color: active ? (accent ? T.accent : T.ink2) : T.ink3 }}>{eyebrow}</span>
+        <span style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+          <span style={{ fontFamily: T.fontDisplay, fontWeight: active ? 700 : 600,
+                         fontSize:13, lineHeight:1, letterSpacing:'-.005em',
+                         color: active ? T.ink0 : T.ink2 }}>{label}</span>
+          {unit && <span style={{ fontFamily: T.fontSans, fontSize:9, color: T.ink3 }}>{unit}</span>}
+          {mood && <span style={{ width:5, height:5, borderRadius:'50%', background: mc }}/>}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div style={{ background: T.paper, height:'100%', overflow:'hidden',
+                  fontFamily: T.fontSans, color: T.ink1,
+                  display:'flex', flexDirection:'column' }}>
+      {/* Status bar */}
+      <div style={{ height:36, padding:'0 18px', flexShrink:0,
+                    display:'flex', alignItems:'center', justifyContent:'space-between',
+                    fontFamily: T.fontMono, fontSize:13, color: T.ink1, fontWeight:600,
+                    background: T.paper }}>
+        <span>{nowStr}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+          <SignalIcon/><WifiIcon/><BatteryIcon/>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ flexShrink:0, background: T.surface, borderBottom:`1px solid ${T.rule2}`, paddingTop:4 }}>
+        <div style={{ padding:'4px 16px 8px', display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontFamily: T.fontDisplay, fontSize:17, fontWeight:700, letterSpacing:'-.02em', lineHeight:1 }}>
+            Market <span style={{ fontStyle:'italic', color: T.accent }}>Intelligence</span>
+          </span>
+          <div style={{ flex:1 }}/>
+          <IconBtnSm><SearchIconSm/></IconBtnSm>
+          <IconBtnSm><BookmarkIconSm/></IconBtnSm>
+        </div>
+        <div style={{ display:'flex', gap:0, padding:'0 12px', overflowX:'auto', whiteSpace:'nowrap' }}>
+          <MobileTab label="Overview" eyebrow="5 day" accent active={activeTab==='overview'}
+                     onClick={() => setActiveTab('overview')}/>
+          {days.map((d, i) => (
+            <MobileTab key={d.dateKey} label={d.dateShort}
+                       eyebrow={i===0 ? 'today' : i===1 ? 'yest.' : `${i}d ago`}
+                       active={activeTab===d.dateKey} onClick={() => setActiveTab(d.dateKey)}
+                       mood={d.mood}/>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, minHeight:0, overflow:'hidden' }}>
+        {activeTab === 'overview'
+          ? <MobileOverview days={days} onSelectDay={setActiveTab}/>
+          : <MobileDayView day={days.find(d => d.dateKey === activeTab) || days[0]}/>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Desktop shell + tab nav ─────────────────────────────────────────────────
+
+function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }) {
+  const { tokens: T, moodColor } = window.HF;
+  const Tab = ({ label, eyebrow, active, onClick, accent, mood }) => {
+    const mc = moodColor(mood);
+    return (
+      <button onClick={onClick} style={{ background:'transparent', border:0, cursor:'pointer',
+                                          padding:'12px 18px 10px',
+                                          borderBottom:`2px solid ${active ? (accent ? T.accent : T.ink0) : 'transparent'}`,
+                                          display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2,
+                                          transition:'background .12s', color: T.ink1 }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.paperSub; }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
+        <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
+                       textTransform:'uppercase', letterSpacing:'.12em',
+                       color: active ? (accent ? T.accent : T.ink2) : T.ink3 }}>{eyebrow}</span>
+        <span style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <span style={{ fontFamily: T.fontDisplay, fontWeight: active ? 700 : 600,
+                         fontSize:15, lineHeight:1, letterSpacing:'-.005em',
+                         color: active ? T.ink0 : T.ink2 }}>{label}</span>
+          {mood && <span style={{ width:6, height:6, borderRadius:'50%', background: mc }}/>}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div style={{ background: T.paper, height:'100%', overflow:'hidden',
+                  display:'flex', flexDirection:'column',
+                  fontFamily: T.fontSans, color: T.ink1 }}>
+      <nav style={{ display:'flex', alignItems:'stretch', gap:0,
+                    padding:'0 24px', background: T.surface,
+                    borderBottom:`1px solid ${T.rule2}` }}>
+        <Tab label="5-day overview" eyebrow="overview"
+             active={active==='overview'} onClick={() => onSelect('overview')} accent/>
+        {tabs.map((d, i) => (
+          <Tab key={d.dateKey} label={d.dateShort}
+               eyebrow={i===0 ? 'today' : i===1 ? 'yesterday' : `${i} days ago`}
+               active={active===d.dateKey} onClick={() => onSelect(d.dateKey)} mood={d.mood}/>
+        ))}
+        <div style={{ flex:1 }}/>
+        <button onClick={onRefresh} disabled={loading}
+          style={{ alignSelf:'center', marginRight:8,
+                   fontFamily: T.fontSans, fontSize:11, fontWeight:600,
+                   color: loading ? T.ink4 : T.ink2,
+                   background:'transparent', border:`1px solid ${T.rule2}`,
+                   borderRadius:999, padding:'5px 12px', cursor: loading ? 'default' : 'pointer',
+                   display:'flex', alignItems:'center', gap:6 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               style={{ animation: loading ? 'spin .7s linear infinite' : 'none' }}>
+            <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 6.35 2.65L21 9V3h-6l2.18 2.18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </nav>
+      <div style={{ flex:1, minHeight:0, position:'relative' }}>{children}</div>
+    </div>
+  );
+}
+
+// ─── Root app ────────────────────────────────────────────────────────────────
+
+function App() {
+  const [data,    setData]    = React.useState(null);
+  const [error,   setError]   = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState('overview');
+  const [isMobile, setIsMobile]   = React.useState(window.innerWidth < 768);
+
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const fetchData = React.useCallback(() => {
+    setLoading(true);
+    fetch('/api/data')
+      .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        window.NEWS_DATA = d;
+        setData(d);
+        setError(null);
+      })
+      .catch(e => setError(e.message))
+      .finally(() => {
+        setLoading(false);
+        const el = document.getElementById('loading');
+        if (el) { el.classList.add('fade'); setTimeout(() => el.remove(), 350); }
+      });
+  }, []);
+
+  React.useEffect(() => { fetchData(); }, [fetchData]);
+
+  if (error) {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
+                    justifyContent:'center', height:'100vh',
+                    background:'var(--paper)', gap:14, padding:24, textAlign:'center' }}>
+        <div style={{ fontFamily:'"Newsreader",serif', fontSize:22, fontWeight:600,
+                      color:'var(--ink-2)', fontStyle:'italic' }}>Could not load data</div>
+        <div style={{ fontFamily:'"Hanken Grotesk",sans-serif', fontSize:13, color:'var(--ink-3)',
+                      maxWidth:420, lineHeight:1.5 }}>{error}</div>
+        <button onClick={fetchData}
+          style={{ fontFamily:'"Hanken Grotesk",sans-serif', fontSize:13, fontWeight:600,
+                   color:'#fff', background:'var(--accent)', border:0,
+                   borderRadius:999, padding:'9px 22px', cursor:'pointer' }}>Try again</button>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  if (isMobile) return <HifiMobile/>;
+
+  return (
+    <DashboardShell tabs={data.days} active={activeTab} onSelect={setActiveTab}
+                    onRefresh={fetchData} loading={loading}>
+      {activeTab === 'overview'
+        ? <HifiOverview days={data.days} onSelectDay={setActiveTab}/>
+        : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}/>}
+    </DashboardShell>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
