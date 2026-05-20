@@ -8,40 +8,40 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
 <style>
-  /* Beyond Insights brand palette */
+  /* Beyond Insights brand palette — clean neutral base, magenta accent */
   :root {
-    --paper:      #f5f8fc;
-    --paper-alt:  #ebf1f9;
-    --paper-sub:  #dde8f4;
+    --paper:      #f8f9fa;
+    --paper-alt:  #f1f3f6;
+    --paper-sub:  #e8ecf0;
     --surface:    #ffffff;
-    --ink-0:      #0d1f3c;
-    --ink-1:      #203c6c;
-    --ink-2:      #2d4e8a;
-    --ink-3:      #58595b;
-    --ink-4:      #8a9bb5;
-    --ink-5:      #c0cedf;
-    --rule:       rgba(0,121,193,0.10);
-    --rule-2:     rgba(0,121,193,0.20);
+    --ink-0:      #111827;
+    --ink-1:      #1f2937;
+    --ink-2:      #374151;
+    --ink-3:      #6b7280;
+    --ink-4:      #9ca3af;
+    --ink-5:      #d1d5db;
+    --rule:       rgba(0,0,0,0.07);
+    --rule-2:     rgba(0,0,0,0.13);
     --accent:     #c6006f;
     --accent-sub: #fce8f3;
-    --bull:       #176b39;
-    --bull-bg:    #e3eed9;
-    --bull-sub:   #f0f5e7;
-    --bull-rgb:   23,107,57;
-    --bear:       #a82c25;
-    --bear-bg:    #f3d6d2;
-    --bear-sub:   #f9e7e4;
-    --bear-rgb:   168,44,37;
-    --mixed:      #8b5a13;
-    --mixed-bg:   #f1e2c5;
-    --mixed-sub:  #f7ecd6;
-    --mixed-rgb:  139,90,19;
-    --neutral:    #58595b;
-    --neutral-bg: #e8edf5;
-    --neutral-rgb:88,89,91;
+    --bull:       #166534;
+    --bull-bg:    #dcfce7;
+    --bull-sub:   #f0fdf4;
+    --bull-rgb:   22,101,52;
+    --bear:       #991b1b;
+    --bear-bg:    #fee2e2;
+    --bear-sub:   #fef2f2;
+    --bear-rgb:   153,27,27;
+    --mixed:      #92400e;
+    --mixed-bg:   #fef3c7;
+    --mixed-sub:  #fffbeb;
+    --mixed-rgb:  146,64,14;
+    --neutral:    #4b5563;
+    --neutral-bg: #f3f4f6;
+    --neutral-rgb:75,85,99;
     --p1:         #c6006f;
     --p2:         #0079c1;
-    --p3:         #8a9bb5;
+    --p3:         #9ca3af;
     --bi-blue:    #0079c1;
     --bi-navy:    #203c6c;
     color-scheme: light;
@@ -61,7 +61,7 @@
     position: fixed; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    background: var(--bi-navy); gap: 14px;
+    background: var(--paper); gap: 14px;
     font-family: "Montserrat", sans-serif;
     z-index: 999;
     transition: opacity .3s;
@@ -69,19 +69,19 @@
   #loading.fade { opacity: 0; pointer-events: none; }
   .spinner {
     width: 28px; height: 28px;
-    border: 2.5px solid rgba(255,255,255,0.25);
-    border-top-color: #ffffff;
+    border: 2.5px solid var(--rule-2);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin .7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-label {
     font-family: "Montserrat", sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: #ffffff; letter-spacing: .06em; text-transform: uppercase;
+    font-size: 15px; font-weight: 700;
+    color: var(--ink-1); letter-spacing: .06em; text-transform: uppercase;
   }
   .loading-sub {
-    font-size: 11px; color: rgba(255,255,255,0.6);
+    font-size: 11px; color: var(--ink-3);
     letter-spacing: .08em; text-transform: uppercase;
   }
 </style>
@@ -1757,22 +1757,22 @@ function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }
   const { tokens: T, moodColor } = window.HF;
   const Tab = ({ label, eyebrow, active, onClick, accent, mood }) => {
     const mc = moodColor(mood);
-    const activeBorder = accent ? 'var(--accent)' : 'rgba(255,255,255,0.9)';
+    const activeBorder = accent ? T.accent : T.ink0;
     return (
       <button onClick={onClick} style={{ background:'transparent', border:0, cursor:'pointer',
                                           padding:'12px 18px 10px',
                                           borderBottom:`2px solid ${active ? activeBorder : 'transparent'}`,
                                           display:'flex', flexDirection:'column', alignItems:'flex-start', gap:2,
-                                          transition:'background .12s', color: '#fff' }}
-        onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                          transition:'background .12s', color: T.ink1 }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = T.paperSub; }}
         onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}>
         <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
                        textTransform:'uppercase', letterSpacing:'.12em',
-                       color: active ? (accent ? 'var(--accent)' : 'rgba(255,255,255,0.95)') : 'rgba(255,255,255,0.5)' }}>{eyebrow}</span>
+                       color: active ? (accent ? T.accent : T.ink2) : T.ink4 }}>{eyebrow}</span>
         <span style={{ display:'flex', alignItems:'center', gap:6 }}>
           <span style={{ fontFamily: T.fontDisplay, fontWeight: active ? 700 : 500,
                          fontSize:15, lineHeight:1, letterSpacing:'.01em',
-                         color: active ? '#ffffff' : 'rgba(255,255,255,0.7)' }}>{label}</span>
+                         color: active ? T.ink0 : T.ink3 }}>{label}</span>
           {mood && <span style={{ width:6, height:6, borderRadius:'50%', background: mc }}/>}
         </span>
       </button>
@@ -1784,8 +1784,8 @@ function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }
                   display:'flex', flexDirection:'column',
                   fontFamily: T.fontSans, color: T.ink1 }}>
       <nav style={{ display:'flex', alignItems:'stretch', gap:0,
-                    padding:'0 24px', background: 'var(--bi-navy)',
-                    borderBottom:'none' }}>
+                    padding:'0 24px', background: T.surface,
+                    borderBottom:`1px solid ${T.rule2}` }}>
         <Tab label="5-day overview" eyebrow="overview"
              active={active==='overview'} onClick={() => onSelect('overview')} accent/>
         {tabs.map((d, i) => (
@@ -1797,8 +1797,8 @@ function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }
         <button onClick={onRefresh} disabled={loading}
           style={{ alignSelf:'center', marginRight:8,
                    fontFamily: T.fontSans, fontSize:11, fontWeight:600,
-                   color: loading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)',
-                   background:'transparent', border:'1px solid rgba(255,255,255,0.25)',
+                   color: loading ? T.ink4 : T.ink2,
+                   background:'transparent', border:`1px solid ${T.rule2}`,
                    borderRadius:999, padding:'5px 12px', cursor: loading ? 'default' : 'pointer',
                    display:'flex', alignItems:'center', gap:6 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
