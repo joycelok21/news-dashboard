@@ -200,7 +200,7 @@ module.exports = async function handler(req, res) {
 
     const days = allDates.map((dateKey, i) => {
       const articles = (articlesByDate[dateKey] || [])
-        .sort((a, b) => a.hr - b.hr || a.time.localeCompare(b.time));
+        .sort((a, b) => a.hr - b.hr || b.time.localeCompare(a.time));
       const sm = summaryByDate[dateKey] || {};
 
       const mood = sm.mood || (() => {
