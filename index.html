@@ -96,6 +96,15 @@
   *::-webkit-scrollbar-track { background: transparent; }
   *::-webkit-scrollbar-thumb { background: var(--ink-5); border-radius: 2px; }
 
+  /* Password gate */
+  #pw-gate {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: var(--paper-sub);
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
   /* Loading screen */
   #loading {
     position: fixed; inset: 0;
@@ -137,9 +146,18 @@
 
 <script>
   (function() {
+    // Theme init
     var saved = localStorage.getItem('mi-theme');
     var preferred = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', preferred);
+
+    // If not authenticated, hide loading and root until password is entered
+    if (localStorage.getItem('mi-auth') !== 'bianalyst-ok') {
+      var loading = document.getElementById('loading');
+      if (loading) loading.style.display = 'none';
+      var root = document.getElementById('root');
+      if (root) root.style.display = 'none';
+    }
   })();
 </script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
@@ -147,6 +165,171 @@
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin></script>
 
 <script type="text/babel">
+// ─── Password gate ───────────────────────────────────────────────────────────
+
+function PasswordGate({ children }) {
+  const AUTH_KEY   = 'mi-auth';
+  const AUTH_TOKEN = 'bianalyst-ok';
+
+  const [authed,   setAuthed]   = React.useState(() => localStorage.getItem(AUTH_KEY) === AUTH_TOKEN);
+  const [pw,       setPw]       = React.useState('');
+  const [error,    setError]    = React.useState(false);
+  const [shake,    setShake]    = React.useState(false);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!authed && inputRef.current) inputRef.current.focus();
+  }, [authed]);
+
+  // When auth is granted, reveal the loading / root divs that were hidden
+  React.useEffect(() => {
+    if (authed) {
+      const loading = document.getElementById('loading');
+      const root    = document.getElementById('root');
+      if (loading) loading.style.display = '';
+      if (root)    root.style.display    = '';
+    }
+  }, [authed]);
+
+  const attempt = () => {
+    if (pw.trim().toLowerCase() === 'bianalyst') {
+      localStorage.setItem(AUTH_KEY, AUTH_TOKEN);
+      setAuthed(true);
+      setError(false);
+    } else {
+      setError(true);
+      setShake(true);
+      setPw('');
+      setTimeout(() => setShake(false), 600);
+      if (inputRef.current) inputRef.current.focus();
+    }
+  };
+
+  if (authed) return children;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'var(--paper-sub)',
+      fontFamily: '"Inter", system-ui, sans-serif',
+    }}>
+      {/* Card */}
+      <div style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--rule-2)',
+        borderTop: '3px solid var(--ink-0)',
+        borderRadius: 6,
+        padding: '44px 48px 40px',
+        width: '100%', maxWidth: 400,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+        animation: shake ? 'shake 0.5s ease' : 'none',
+      }}>
+        {/* Logo area */}
+        <div style={{ marginBottom: 28, textAlign: 'center' }}>
+          <div style={{
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontSize: 28, fontWeight: 800,
+            letterSpacing: '-0.5px',
+            color: 'var(--ink-0)', lineHeight: 1,
+            textTransform: 'uppercase',
+          }}>
+            Market <span style={{ color: 'var(--accent)' }}>Intelligence</span>
+          </div>
+          <div style={{
+            fontFamily: '"Inter", system-ui, sans-serif',
+            fontSize: 10, fontWeight: 600,
+            letterSpacing: '.14em', textTransform: 'uppercase',
+            color: 'var(--ink-3)', marginTop: 7,
+          }}>
+            Beyond Insights · Daily Market Brief
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'var(--rule-2)', marginBottom: 28 }}/>
+
+        {/* Label */}
+        <div style={{
+          fontFamily: '"Inter", system-ui, sans-serif',
+          fontSize: 11, fontWeight: 600,
+          letterSpacing: '.1em', textTransform: 'uppercase',
+          color: 'var(--ink-3)', marginBottom: 10,
+        }}>
+          Access password
+        </div>
+
+        {/* Input */}
+        <input
+          ref={inputRef}
+          type="password"
+          value={pw}
+          onChange={e => { setPw(e.target.value); setError(false); }}
+          onKeyDown={e => e.key === 'Enter' && attempt()}
+          placeholder="Enter password…"
+          style={{
+            width: '100%', padding: '11px 14px',
+            fontFamily: '"Inter", system-ui, sans-serif', fontSize: 14,
+            background: 'var(--paper-alt)', color: 'var(--ink-1)',
+            border: `1.5px solid ${error ? 'var(--bear)' : 'var(--rule-2)'}`,
+            borderRadius: 4, outline: 'none',
+            transition: 'border-color .15s',
+            marginBottom: error ? 8 : 16,
+            boxShadow: error ? '0 0 0 3px rgba(184,50,50,0.10)' : 'none',
+          }}
+        />
+
+        {/* Error message */}
+        {error && (
+          <div style={{
+            fontFamily: '"Inter", system-ui, sans-serif',
+            fontSize: 12, color: 'var(--bear)',
+            marginBottom: 14, letterSpacing: '.01em',
+          }}>
+            Incorrect password. Please try again.
+          </div>
+        )}
+
+        {/* Submit button */}
+        <button onClick={attempt} style={{
+          width: '100%', padding: '11px',
+          fontFamily: '"Inter", system-ui, sans-serif',
+          fontSize: 13, fontWeight: 700,
+          letterSpacing: '.06em', textTransform: 'uppercase',
+          background: 'var(--ink-0)', color: '#fff',
+          border: 'none', borderRadius: 4, cursor: 'pointer',
+          transition: 'opacity .15s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+          Enter
+        </button>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        marginTop: 20,
+        fontFamily: '"Inter", system-ui, sans-serif',
+        fontSize: 11, color: 'var(--ink-4)',
+        letterSpacing: '.04em',
+      }}>
+        Restricted access · Beyond Insights
+      </div>
+
+      <style>{`
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          20%      { transform: translateX(-8px); }
+          40%      { transform: translateX(8px); }
+          60%      { transform: translateX(-6px); }
+          80%      { transform: translateX(6px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // ─── Design tokens + shared primitives ──────────────────────────────────────
 
 window.HF = (() => {
@@ -2238,7 +2421,9 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <PasswordGate><App/></PasswordGate>
+);
 </script>
 </body>
 </html>
