@@ -311,7 +311,7 @@ function DigestBanner({ D }) {
       <div onClick={() => setOpen(true)} style={{
         background: T.surface, cursor: 'pointer',
         border: `1px solid ${T.rule2}`, borderTop: `3px solid ${T.ink0}`,
-        borderRadius: 4, marginBottom: 20,
+        borderRadius: 4, marginBottom: 32,
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '0 20px', height: 38, flexShrink: 0,
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -340,9 +340,8 @@ function DigestBanner({ D }) {
     <div style={{
       background: T.surface,
       border: `1px solid ${T.rule2}`, borderTop: `3px solid ${T.ink0}`,
-      borderRadius: 4, marginBottom: 20,
+      borderRadius: 4, marginBottom: 32,
       boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-      flexShrink: 0,
     }}>
       {/* Header row — entire row is clickable to collapse */}
       <div onClick={() => setOpen(false)}
@@ -484,6 +483,14 @@ function DigestBanner({ D }) {
           })()}
         </div>
       </div>
+
+      {/* Scroll hint */}
+      <div style={{ padding: '6px 20px 10px', display: 'flex', justifyContent: 'flex-end' }}>
+        <span style={{ fontFamily: T.fontSans, fontSize: 10, color: T.ink4,
+                       letterSpacing: '.06em' }}>
+          scroll down to read the news ↓
+        </span>
+      </div>
     </div>
   );
 }
@@ -600,12 +607,9 @@ function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 0,
-      padding: '0 8px', background: T.surface,
-      border: `1px solid ${T.rule2}`,
-      borderRadius: 4,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-      flexWrap: 'wrap', marginBottom: 0,
-      minHeight: 40,
+      padding: '0', background: 'transparent',
+      flexWrap: 'wrap',
+      minHeight: 44,
     }}>
       <FilterCat on={!cat} onClick={() => setCat(null)}>All</FilterCat>
       <span style={{ width: 1, height: 14, background: T.rule2, margin: '0 2px' }}/>
@@ -859,11 +863,10 @@ function SidebarHeatmap({ day }) {
 
 // ─── Desktop day view ────────────────────────────────────────────────────────
 
-function HifiDesktop({ day }) {
+function HifiDesktop({ day, searchQ, setSearchQ }) {
   const D = day || window.NEWS_DATA;
   const { tokens: T, Eyebrow, SectionHeader, SentBadge } = window.HF;
 
-  const [searchQ,  setSearchQ]  = React.useState('');
   const [prio,     setPrio]     = React.useState(null);
   const [sent,     setSent]     = React.useState(null);
   const [cat,      setCat]      = React.useState(null);
@@ -919,47 +922,10 @@ function HifiDesktop({ day }) {
     <div style={{ background: T.paper, height: '100%', overflow: 'hidden',
                   fontFamily: T.fontSans, color: T.ink1, display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Slim info + search bar — never scrolls ───────────────── */}
-      <div style={{ padding: '10px 28px', background: T.surface,
+      {/* ── Filter row — always visible, never scrolls away ────────── */}
+      <div style={{ flexShrink: 0, padding: '0 28px', background: T.surface,
                     borderBottom: `1px solid ${T.rule2}`,
-                    display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-        <span style={{ fontFamily: T.fontDisplay, fontSize: 18, fontWeight: 700,
-                       fontStyle: 'italic', color: T.accent, letterSpacing: '-.01em' }}>
-          {D.dateShort || 'Today'}
-        </span>
-        <span style={{ width: 1, height: 14, background: T.rule2 }}/>
-        <Eyebrow style={{ color: T.ink3 }}>{D.date}</Eyebrow>
-        <span style={{ fontFamily: T.fontSans, fontSize: 11, color: T.ink4 }}>
-          Refreshed {D.refreshed}
-        </span>
-        <div style={{ flex: 1 }}/>
-        <div style={{ position: 'relative', width: 260 }}>
-          <input value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                 placeholder="Search headlines, tickers, themes…"
-                 style={{ width: '100%', padding: '6px 28px 6px 28px',
-                          fontFamily: T.fontSans, fontSize: 12.5,
-                          background: T.paperAlt, color: T.ink1,
-                          border: `1px solid ${searchQ ? T.accent : T.rule2}`,
-                          borderRadius: 999, outline: 'none' }}/>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-               style={{ position: 'absolute', left: 9, top: 8, color: searchQ ? T.accent : T.ink3 }}>
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6"/>
-            <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-          </svg>
-          {searchQ && (
-            <button onClick={() => setSearchQ('')}
-              style={{ position: 'absolute', right: 6, top: 4, width: 20, height: 20,
-                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                       background: T.paperSub, border: 0, borderRadius: '50%',
-                       color: T.ink2, cursor: 'pointer', fontSize: 12 }}>×</button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Digest + Filter — fixed, never scroll away ───────────── */}
-      <div style={{ flexShrink: 0, padding: '20px 28px 16px', background: T.paper,
-                    borderBottom: `1px solid ${T.rule2}` }}>
-        <DigestBanner D={D}/>
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
         <FilterRow D={D} cat={cat} setCat={setCat} prio={prio} setPrio={setPrio}
                    sent={sent} setSent={setSent}/>
         {anyFilter && (
@@ -983,6 +949,9 @@ function HifiDesktop({ day }) {
           style={{ overflow: 'auto', padding: '28px 24px 48px 28px',
                    background: T.paper,
                    display: 'flex', flexDirection: 'column' }}>
+
+          {/* Digest — first item in scroll, reads naturally then scrolls away */}
+          <DigestBanner D={D}/>
 
           {hours.length === 0 ? (
             <div style={{ padding: '60px 24px', textAlign: 'center',
@@ -1993,7 +1962,7 @@ function HifiMobile() {
 
 // ─── Desktop shell + tab nav ─────────────────────────────────────────────────
 
-function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }) {
+function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children, searchQ, setSearchQ }) {
   const { tokens: T, moodColor, moodLabel } = window.HF;
   const [theme, setTheme] = React.useState(
     document.documentElement.getAttribute('data-theme') || 'light'
@@ -2105,47 +2074,91 @@ function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children }
           </div>
         </div>
 
-        {/* Tab nav row */}
+        {/* Tab nav row — tabs left, search+controls right */}
         <div style={{ display: 'flex', alignItems: 'stretch', gap: 0,
-                      overflowX: 'auto', scrollbarWidth: 'none', margin: '0 -28px',
-                      padding: '0 28px', borderTop: `1px solid ${T.rule}` }}>
-          <Tab label="5-day overview" eyebrow="overview"
-               active={active === 'overview'} onClick={() => onSelect('overview')} accent/>
-          {tabs.map((d, i) => (
-            <Tab key={d.dateKey} label={d.dateShort}
-                 eyebrow={i === 0 ? 'today' : i === 1 ? 'yesterday' : `${i} days ago`}
-                 active={active === d.dateKey} onClick={() => onSelect(d.dateKey)} mood={d.mood}/>
-          ))}
-          <div style={{ flex: 1 }}/>
-          {/* Theme toggle */}
-          <button onClick={toggleTheme}
-            style={{ alignSelf: 'center', marginRight: 6,
-                     fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
-                     color: T.ink2, background: 'transparent', border: `1px solid ${T.rule2}`,
-                     borderRadius: 999, padding: '5px 10px', cursor: 'pointer',
-                     display: 'flex', alignItems: 'center', gap: 5 }}>
-            {theme === 'dark'
-              ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 3v1M12 20v1M4.22 4.22l.7.7M18.36 18.36l.7.7M3 12h1M20 12h1M4.92 19.07l.7-.7M18.36 5.64l.7-.7M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
-              : <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            }
-            {theme === 'dark' ? 'Light' : 'Dark'}
-          </button>
-          {/* Refresh button */}
-          <button onClick={onRefresh} disabled={loading}
-            style={{ alignSelf: 'center', marginRight: 0,
-                     fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
-                     color: loading ? T.ink4 : T.ink2,
-                     background: 'transparent', border: `1px solid ${T.rule2}`,
-                     borderRadius: 999, padding: '5px 12px',
-                     cursor: loading ? 'default' : 'pointer',
-                     display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 style={{ animation: loading ? 'spin .7s linear infinite' : 'none' }}>
-              <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 6.35 2.65L21 9V3h-6l2.18 2.18"
-                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {loading ? 'Refreshing…' : 'Refresh'}
-          </button>
+                      margin: '0 -28px', borderTop: `1px solid ${T.rule}` }}>
+
+          {/* Scrollable tabs section */}
+          <div style={{ display: 'flex', alignItems: 'stretch', flex: 1, minWidth: 0,
+                        overflowX: 'auto', scrollbarWidth: 'none' }}>
+            <Tab label="5-day overview" eyebrow="overview"
+                 active={active === 'overview'} onClick={() => onSelect('overview')} accent/>
+            {tabs.map((d, i) => (
+              <Tab key={d.dateKey} label={d.dateShort}
+                   eyebrow={i === 0 ? 'today' : i === 1 ? 'yesterday' : `${i} days ago`}
+                   active={active === d.dateKey} onClick={() => onSelect(d.dateKey)} mood={d.mood}/>
+            ))}
+          </div>
+
+          {/* Right controls — search + date meta + theme + refresh */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '0 28px 0 16px', flexShrink: 0,
+                        borderLeft: `1px solid ${T.rule}` }}>
+
+            {/* Date + refreshed meta */}
+            {tabs[0] && (
+              <span style={{ fontFamily: T.fontSans, fontSize: 10.5, color: T.ink4,
+                             whiteSpace: 'nowrap', paddingRight: 8,
+                             borderRight: `1px solid ${T.rule}` }}>
+                <span style={{ color: T.ink3, fontWeight: 600 }}>{tabs[0].dateShort}</span>
+                {' · '}
+                <span>Refreshed {tabs[0].refreshed}</span>
+              </span>
+            )}
+
+            {/* Search input */}
+            <div style={{ position: 'relative' }}>
+              <input value={searchQ || ''} onChange={e => setSearchQ && setSearchQ(e.target.value)}
+                     placeholder="Search headlines, tickers…"
+                     style={{ width: 230, padding: '5px 26px 5px 28px',
+                              fontFamily: T.fontSans, fontSize: 12,
+                              background: T.paperAlt, color: T.ink1,
+                              border: `1px solid ${searchQ ? T.accent : T.rule2}`,
+                              borderRadius: 999, outline: 'none', height: 30 }}/>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
+                            color: searchQ ? T.accent : T.ink4, pointerEvents: 'none' }}>
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.7"/>
+                <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+              </svg>
+              {searchQ && (
+                <button onClick={() => setSearchQ && setSearchQ('')}
+                  style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                           width: 18, height: 18, display: 'flex', alignItems: 'center',
+                           justifyContent: 'center', background: T.ink4, border: 0,
+                           borderRadius: '50%', color: '#fff', cursor: 'pointer', fontSize: 11 }}>×</button>
+              )}
+            </div>
+
+            {/* Theme toggle */}
+            <button onClick={toggleTheme}
+              style={{ fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
+                       color: T.ink2, background: 'transparent', border: `1px solid ${T.rule2}`,
+                       borderRadius: 999, padding: '4px 10px', cursor: 'pointer',
+                       display: 'flex', alignItems: 'center', gap: 5, height: 30, whiteSpace: 'nowrap' }}>
+              {theme === 'dark'
+                ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 3v1M12 20v1M4.22 4.22l.7.7M18.36 18.36l.7.7M3 12h1M20 12h1M4.92 19.07l.7-.7M18.36 5.64l.7-.7M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                : <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              }
+              {theme === 'dark' ? 'Light' : 'Dark'}
+            </button>
+
+            {/* Refresh button */}
+            <button onClick={onRefresh} disabled={loading}
+              style={{ fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
+                       color: loading ? T.ink4 : T.ink2,
+                       background: 'transparent', border: `1px solid ${T.rule2}`,
+                       borderRadius: 999, padding: '4px 10px', height: 30,
+                       cursor: loading ? 'default' : 'pointer',
+                       display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                   style={{ animation: loading ? 'spin .7s linear infinite' : 'none' }}>
+                <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 6.35 2.65L21 9V3h-6l2.18 2.18"
+                      stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {loading ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -2161,6 +2174,7 @@ function App() {
   const [error,   setError]   = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState('overview');
+  const [searchQ,   setSearchQ]   = React.useState('');
   const [isMobile, setIsMobile]   = React.useState(window.innerWidth < 768);
 
   React.useEffect(() => {
@@ -2210,12 +2224,16 @@ function App() {
 
   if (isMobile) return <HifiMobile/>;
 
+  const handleTabSelect = (tab) => { setActiveTab(tab); setSearchQ(''); };
+
   return (
-    <DashboardShell tabs={data.days} active={activeTab} onSelect={setActiveTab}
-                    onRefresh={fetchData} loading={loading}>
+    <DashboardShell tabs={data.days} active={activeTab} onSelect={handleTabSelect}
+                    onRefresh={fetchData} loading={loading}
+                    searchQ={searchQ} setSearchQ={setSearchQ}>
       {activeTab === 'overview'
-        ? <HifiOverview days={data.days} onSelectDay={setActiveTab}/>
-        : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}/>}
+        ? <HifiOverview days={data.days} onSelectDay={handleTabSelect}/>
+        : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}
+                       searchQ={searchQ} setSearchQ={setSearchQ}/>}
     </DashboardShell>
   );
 }
