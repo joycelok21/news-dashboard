@@ -139,7 +139,7 @@ module.exports = async function handler(req, res) {
     const articlesByDate = {};
     newsRows.forEach((row, idx) => {
       const [timestamp, date, source, headline, url, priority, summary,
-             categories, , affectedTickers, relatedEtfs, sentiment, implications,
+             categories, mentionedTickers, affectedTickers, relatedEtfs, sentiment, implications,
              matchedProfiles] = row;
 
       const dateKey = extractDateKey(date) || extractDateKey(timestamp);
@@ -148,6 +148,7 @@ module.exports = async function handler(req, res) {
       if (!articlesByDate[dateKey]) articlesByDate[dateKey] = [];
 
       const tickers = [...new Set([
+        ...splitList(mentionedTickers),
         ...splitList(affectedTickers),
         ...splitList(relatedEtfs),
       ])].slice(0, 6);
