@@ -233,6 +233,11 @@ module.exports = async function handler(req, res) {
         if (t !== '09:00') refreshed += `, ${t}`;
       }
 
+      // If Key Themes column is blank, fall back to this day's article categories
+      const digestThemes = (sm.themes && sm.themes.length > 0)
+        ? sm.themes
+        : [...new Set(articles.flatMap(a => a.cats))].slice(0, 8);
+
       return {
         date: formatDateLabel(dateKey),
         dateShort: formatDateShort(dateKey),
@@ -242,7 +247,7 @@ module.exports = async function handler(req, res) {
         digest: {
           body: sm.body || '',
           secondOrder: sm.secondOrder || '',
-          themes: sm.themes || [],
+          themes: digestThemes,
         },
         tickers: allTickers,
         stats: {

@@ -1047,13 +1047,16 @@ function SidebarHeatmap({ day, activeCat, activeBucket, onCellClick }) {
 
 // ─── Desktop day view ────────────────────────────────────────────────────────
 
-function HifiDesktop({ day, searchQ, setSearchQ }) {
+function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
   const D = day || window.NEWS_DATA;
   const { tokens: T, Eyebrow, SectionHeader, SentBadge } = window.HF;
 
   const [prio,     setPrio]     = React.useState(null);
   const [sent,     setSent]     = React.useState(null);
-  const [cat,      setCat]      = React.useState(null);
+  const [cat,      setCat]      = React.useState(initialCat || null);
+
+  // Sync when navigating from overview heatmap with a pre-set category
+  React.useEffect(() => { setCat(initialCat || null); }, [initialCat]);
   const [ticker,   setTicker]   = React.useState(null);
   const [bucket,   setBucket]   = React.useState(null); // set only via heatmap click
 
@@ -1472,7 +1475,8 @@ function HifiOverview({ days, onSelectDay }) {
                   </div>
                 ))}
                 {window.NEWS_DATA.categories.map(c => {
-                  const row = [...days].reverse().map(d =>
+                  const reversedDays = [...days].reverse();
+                  const row = reversedDays.map(d =>
                     d.articles.filter(a => a.cats.includes(c))
                   );
                   const maxV = Math.max(...row.map(a => a.length), 1);
@@ -1492,13 +1496,20 @@ function HifiOverview({ days, onSelectDay }) {
                         const fg   = dom==='bull' ? T.bull : T.bear;
                         const intensity = 0.25 + 0.75 * (arts.length / maxV);
                         const hasP1 = arts.some(a => a.priority==='P1');
+                        const dateKey = reversedDays[ci].dateKey;
                         return (
-                          <div key={ci} style={{ height:26, position:'relative',
-                                                  background:`color-mix(in oklab,${fg} ${Math.round(intensity*100)}%,transparent)`,
-                                                  border:`1px solid ${T.rule2}`,
-                                                  display:'flex', alignItems:'center', justifyContent:'center',
-                                                  fontFamily: T.fontMono, fontSize:11, fontWeight:700,
-                                                  color:'#fff', cursor:'pointer' }}>
+                          <div key={ci}
+                            onClick={() => onSelectDay(dateKey, c)}
+                            title={`${c} · ${reversedDays[ci].dateShort} — ${arts.length} ${arts.length===1?'story':'stories'}\nClick to open with ${c} filter`}
+                            style={{ height:26, position:'relative',
+                                     background:`color-mix(in oklab,${fg} ${Math.round(intensity*100)}%,transparent)`,
+                                     border:`1px solid ${T.rule2}`,
+                                     display:'flex', alignItems:'center', justifyContent:'center',
+                                     fontFamily: T.fontMono, fontSize:11, fontWeight:700,
+                                     color:'#fff', cursor:'pointer',
+                                     transition: 'filter .12s' }}
+                            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.2)'}
+                            onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
                             {arts.length}
                             {hasP1 && <span style={{ position:'absolute', top:2, right:3,
                                                       width:4, height:4, background:'#fff', borderRadius:'50%' }}/>}
@@ -2373,7 +2384,8 @@ function App() {
   const [error,   setError]   = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState('overview');
-  const [searchQ,   setSearchQ]   = React.useState('');
+  const [searchQ,    setSearchQ]   = React.useState('');
+  const [pendingCat, setPendingCat] = React.useState(null);
   const [isMobile, setIsMobile]   = React.useState(window.innerWidth < 768);
 
   React.useEffect(() => {
@@ -2423,7 +2435,11 @@ function App() {
 
   if (isMobile) return <HifiMobile/>;
 
-  const handleTabSelect = (tab) => { setActiveTab(tab); setSearchQ(''); };
+  const handleTabSelect = (tab, cat = null) => {
+    setActiveTab(tab);
+    setSearchQ('');
+    setPendingCat(cat);
+  };
 
   return (
     <DashboardShell tabs={data.days} active={activeTab} onSelect={handleTabSelect}
@@ -2432,7 +2448,8 @@ function App() {
       {activeTab === 'overview'
         ? <HifiOverview days={data.days} onSelectDay={handleTabSelect}/>
         : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}
-                       searchQ={searchQ} setSearchQ={setSearchQ}/>}
+                       searchQ={searchQ} setSearchQ={setSearchQ}
+                       initialCat={pendingCat}/>}
     </DashboardShell>
   );
 }
