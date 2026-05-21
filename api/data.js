@@ -133,7 +133,7 @@ module.exports = async function handler(req, res) {
     ]);
 
     const newsRows = (newsRes.data.values || []).slice(1).filter(r => r && r[3]);
-    const summaryRows = (summaryRes.data.values || []).slice(1).filter(r => r && r[2]);
+    const summaryRows = (summaryRes.data.values || []).slice(1).filter(r => r && (r[2] || r[6]));
 
     // Build articles by date
     const articlesByDate = {};
@@ -176,7 +176,7 @@ module.exports = async function handler(req, res) {
     const summaryByDate = {};
     summaryRows.forEach(row => {
       const [runTimestamp, date, summary, secondOrder, totalArticles,
-             topTickers, dominantSentiment, keyThemes] = row;
+             dominantSentiment, keyThemes] = row;
 
       const dateKey = extractDateKey(date) || extractDateKey(runTimestamp);
       if (!dateKey) return;
@@ -186,7 +186,6 @@ module.exports = async function handler(req, res) {
         secondOrder: (secondOrder || '').trim(),
         themes: splitList(keyThemes),
         mood: normalizeSentiment(dominantSentiment),
-        topTickers: splitList(topTickers),
         totalFromSheet: parseInt(totalArticles) || 0,
         refreshedRaw: String(runTimestamp || date),
       };
@@ -259,6 +258,18 @@ module.exports = async function handler(req, res) {
       };
     });
 
+    // Aggregate Key Themes from Market Summary across all days (no fallback to categories)
+    const weekThemeCounts = {};
+    days.forEach(day => {
+      const sm = summaryByDate[day.dateKey];
+      if (sm && sm.themes && sm.themes.length > 0) {
+        sm.themes.forEach(t => {
+          weekThemeCounts[t] = (weekThemeCounts[t] || 0) + 1;
+        });
+      }
+    });
+    const weekThemes = Object.entries(weekThemeCounts).sort((a, b) => b[1] - a[1]);
+
     const today = days[0] || {
       date: '', dateShort: '', dateKey: '', refreshed: '',
       mood: 'neutral',
@@ -271,6 +282,7 @@ module.exports = async function handler(req, res) {
       categories: CATEGORIES,
       days,
       todayKey: today.dateKey,
+      weekThemes,
     });
 
   } catch (err) {

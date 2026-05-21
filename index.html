@@ -1290,7 +1290,7 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
 
 // ─── Overview ────────────────────────────────────────────────────────────────
 
-function HifiOverview({ days, onSelectDay }) {
+function HifiOverview({ days, weekThemes, onSelectDay }) {
   const { tokens: T, sentTone, Eyebrow, SectionHeader, Ticker, SentBadge, SentDot, PriorityMark, CatLabel } = window.HF;
 
   const allArticles = days.flatMap(d => d.articles.map(a => ({ ...a, _day: d.dateShort, _dayKey: d.dateKey })));
@@ -1304,9 +1304,7 @@ function HifiOverview({ days, onSelectDay }) {
 
   const topP1 = allArticles.filter(a => a.priority === 'P1').slice(0,5);
 
-  const themeCounts = {};
-  days.forEach(d => d.digest.themes.forEach(t => { themeCounts[t] = (themeCounts[t]||0) + 1; }));
-  const themes = Object.entries(themeCounts).sort((a,b) => b[1]-a[1]);
+  const themes = weekThemes && weekThemes.length > 0 ? weekThemes : [];
 
   const dateRange = days.length >= 2
     ? `${days[days.length-1].dateShort} — ${days[0].dateShort}`
@@ -1864,7 +1862,7 @@ function MobileDayView({ day }) {
   );
 }
 
-function MobileOverview({ days, onSelectDay }) {
+function MobileOverview({ days, weekThemes, onSelectDay }) {
   const { tokens: T, Eyebrow, SectionHeader, SentBadge, PriorityMark, CatLabel, Ticker, sentTone } = window.HF;
   const allArticles = days.flatMap(d => d.articles.map(a => ({ ...a, _day: d.dateShort, _dayKey: d.dateKey })));
   const totalP1   = allArticles.filter(a => a.priority==='P1').length;
@@ -1874,9 +1872,7 @@ function MobileOverview({ days, onSelectDay }) {
   allArticles.forEach(a => a.tickers.forEach(t => { tickerCounts[t] = (tickerCounts[t]||0) + 1; }));
   const topTickers = Object.entries(tickerCounts).sort((a,b) => b[1]-a[1]).slice(0,12);
   const topP1 = allArticles.filter(a => a.priority==='P1').slice(0,4);
-  const themeCounts = {};
-  days.forEach(d => d.digest.themes.forEach(t => { themeCounts[t] = (themeCounts[t]||0) + 1; }));
-  const themes = Object.entries(themeCounts).sort((a,b) => b[1]-a[1]);
+  const themes = weekThemes && weekThemes.length > 0 ? weekThemes : [];
   const dateRange = days.length >= 2
     ? `${days[days.length-1].dateShort} — ${days[0].dateShort}`
     : days[0]?.dateShort || '';
@@ -2173,7 +2169,7 @@ function HifiMobile() {
       {/* Content */}
       <div style={{ flex:1, minHeight:0, overflow:'hidden' }}>
         {activeTab === 'overview'
-          ? <MobileOverview days={days} onSelectDay={setActiveTab}/>
+          ? <MobileOverview days={days} weekThemes={window.NEWS_DATA.weekThemes || []} onSelectDay={setActiveTab}/>
           : <MobileDayView day={days.find(d => d.dateKey === activeTab) || days[0]}/>}
       </div>
     </div>
@@ -2456,7 +2452,7 @@ function App() {
                     onRefresh={fetchData} loading={loading}
                     searchQ={searchQ} setSearchQ={setSearchQ}>
       {activeTab === 'overview'
-        ? <HifiOverview days={data.days} onSelectDay={handleTabSelect}/>
+        ? <HifiOverview days={data.days} weekThemes={data.weekThemes || []} onSelectDay={handleTabSelect}/>
         : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}
                        searchQ={searchQ} setSearchQ={setSearchQ}
                        initialCat={pendingCat}/>}
