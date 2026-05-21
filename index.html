@@ -1584,21 +1584,31 @@ function HifiOverview({ days, onSelectDay }) {
           <div>
             <SectionHeader label="Themes of the week"/>
             <div style={{ background: T.surface, border:`1px solid ${T.rule2}`,
-                          borderRadius: T.rMd, padding:'12px',
-                          display:'flex', flexWrap:'wrap', gap:6, alignItems:'center' }}>
+                          borderRadius: T.rMd, padding:'16px 14px',
+                          display:'flex', flexWrap:'wrap', gap:'8px 14px',
+                          alignItems:'baseline', lineHeight: 1.6 }}>
               {themes.map(([t, n]) => {
-                const sz = n >= 3 ? 17 : n >= 2 ? 14 : 12;
+                const max = themes[0][1];
+                // Scale font size from 11px (least frequent) to 22px (most frequent)
+                const sz  = 11 + Math.round((n / max) * 11);
+                // Scale weight: 400 → 700
+                const fw  = n === 1 ? 400 : n / max >= 0.8 ? 700 : n / max >= 0.5 ? 600 : 500;
+                // Scale colour: faint → dark ink
+                const col = n === max   ? T.ink0
+                          : n / max >= 0.6 ? T.ink1
+                          : n / max >= 0.3 ? T.ink2
+                          : T.ink3;
                 return (
-                  <span key={t} style={{ fontFamily: T.fontDisplay,
-                                          fontSize:sz, fontWeight: n >= 2 ? 700 : 600,
-                                          color: n >= 2 ? T.ink0 : T.ink2,
-                                          letterSpacing:'-.005em',
-                                          display:'inline-flex', alignItems:'baseline', gap:4 }}>
+                  <span key={t} style={{
+                    fontFamily: T.fontDisplay,
+                    fontSize: sz,
+                    fontWeight: fw,
+                    color: col,
+                    letterSpacing: '-.01em',
+                    transition: 'color .12s',
+                    cursor: 'default',
+                  }}>
                     {t}
-                    {n > 1 && (
-                      <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:600,
-                                     color: T.accent, verticalAlign:'super' }}>×{n}</span>
-                    )}
                   </span>
                 );
               })}
