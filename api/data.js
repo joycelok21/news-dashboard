@@ -211,9 +211,18 @@ module.exports = async function handler(req, res) {
         return 'mixed';
       })();
 
-      const allTickers = sm.topTickers && sm.topTickers.length
-        ? sm.topTickers
-        : [...new Set(articles.flatMap(a => a.tickers))].slice(0, 14);
+      // Count how many articles each ticker appears in (deduplicated per article),
+      // then rank by frequency and take the top 14
+      const tickerCounts = {};
+      articles.forEach(a => {
+        a.tickers.forEach(t => {
+          tickerCounts[t] = (tickerCounts[t] || 0) + 1;
+        });
+      });
+      const allTickers = Object.entries(tickerCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 14)
+        .map(([t]) => t);
 
       const p12 = articles.filter(a => a.priority === 'P1' || a.priority === 'P2').length;
       const sources = new Set(articles.map(a => a.source)).size;
