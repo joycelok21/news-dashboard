@@ -150,14 +150,6 @@
     var saved = localStorage.getItem('mi-theme');
     var preferred = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', preferred);
-
-    // If not authenticated, hide loading and root until password is entered
-    if (localStorage.getItem('mi-auth') !== 'bianalyst-ok') {
-      var loading = document.getElementById('loading');
-      if (loading) loading.style.display = 'none';
-      var root = document.getElementById('root');
-      if (root) root.style.display = 'none';
-    }
   })();
 </script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin></script>
@@ -179,16 +171,6 @@ function PasswordGate({ children }) {
 
   React.useEffect(() => {
     if (!authed && inputRef.current) inputRef.current.focus();
-  }, [authed]);
-
-  // When auth is granted, reveal the loading / root divs that were hidden
-  React.useEffect(() => {
-    if (authed) {
-      const loading = document.getElementById('loading');
-      const root    = document.getElementById('root');
-      if (loading) loading.style.display = '';
-      if (root)    root.style.display    = '';
-    }
   }, [authed]);
 
   const attempt = () => {
