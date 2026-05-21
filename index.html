@@ -801,8 +801,8 @@ function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
   );
 }
 
-function ActiveFilters({ searchQ, prio, sent, cat, ticker,
-                          setSearchQ, setPrio, setSent, setCat, setTicker,
+function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
+                          setSearchQ, setPrio, setSent, setCat, setTicker, setBucket,
                           clearAll, count, total }) {
   const { tokens: T } = window.HF;
   const FilterChip = ({ label, onClear }) => (
@@ -829,11 +829,16 @@ function ActiveFilters({ searchQ, prio, sent, cat, ticker,
         {count} <span style={{ color: T.ink3 }}>of {total} stories</span>
       </span>
       <span style={{ width:1, height:14, background: T.rule2 }}/>
-      {searchQ && <FilterChip label={`"${searchQ}"`} onClear={() => setSearchQ('')}/>}
-      {ticker   && <FilterChip label={`Ticker · ${ticker}`} onClear={() => setTicker(null)}/>}
-      {cat      && <FilterChip label={`Category · ${cat}`}  onClear={() => setCat(null)}/>}
-      {prio     && <FilterChip label={`Priority · ${prio}`} onClear={() => setPrio(null)}/>}
-      {sent     && <FilterChip label={`Sentiment · ${sent}`} onClear={() => setSent(null)}/>}
+      {searchQ    && <FilterChip label={`"${searchQ}"`} onClear={() => setSearchQ('')}/>}
+      {ticker     && <FilterChip label={`Ticker · ${ticker}`} onClear={() => setTicker(null)}/>}
+      {cat        && !bucket && <FilterChip label={`Category · ${cat}`} onClear={() => setCat(null)}/>}
+      {prio       && <FilterChip label={`Priority · ${prio}`} onClear={() => setPrio(null)}/>}
+      {sent       && <FilterChip label={`Sentiment · ${sent}`} onClear={() => setSent(null)}/>}
+      {bucket !== null && bucketLabel && (
+        <FilterChip
+          label={`${cat} · ${bucketLabel}`}
+          onClear={() => { setCat(null); setBucket(null); }}/>
+      )}
       <div style={{ flex:1 }}/>
       <button onClick={clearAll} style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
                                            color: T.accent, background:'transparent',
@@ -977,7 +982,7 @@ function HourBlock({ hour, articles, selectedTicker, onTickerClick }) {
   );
 }
 
-function SidebarHeatmap({ day }) {
+function SidebarHeatmap({ day, activeCat, activeBucket, onCellClick }) {
   const { tokens: T } = window.HF;
   const D = day || window.NEWS_DATA;
   const categories = window.NEWS_DATA.categories;
@@ -1001,7 +1006,10 @@ function SidebarHeatmap({ day }) {
                         lineHeight:'16px', overflow:'hidden', whiteSpace:'nowrap',
                         textOverflow:'ellipsis', paddingRight:4 }}>{c}</div>
           {counts[ri].map((arts, ci) => {
-            if (!arts.length) return <div key={ci} style={{ height:18, background: T.surface, border:`1px solid ${T.rule2}` }}/>;
+            const isActive = activeCat === c && activeBucket === ci;
+            if (!arts.length) return (
+              <div key={ci} style={{ height:18, background: T.surface, border:`1px solid ${T.rule2}` }}/>
+            );
             const bull = arts.filter(a => a.sentiment==='bull').length;
             const bear = arts.filter(a => a.sentiment==='bear').length;
             const dom  = bull >= bear ? (bull > 0 ? 'bull' : 'mixed') : 'bear';
@@ -1009,15 +1017,25 @@ function SidebarHeatmap({ day }) {
             const intensity = 0.22 + 0.78 * (arts.length / max);
             const hasP1 = arts.some(a => a.priority==='P1');
             return (
-              <div key={ci} title={arts.map(a => a.headline).join('\n')} style={{
-                height:18, background:`color-mix(in oklab, ${fg} ${Math.round(intensity*100)}%, transparent)`,
-                border:`1px solid ${T.rule2}`, position:'relative',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontWeight:700, fontSize:9, color:'#fff', cursor:'pointer',
-              }}>
+              <div key={ci}
+                onClick={() => onCellClick && onCellClick(c, ci)}
+                title={`${c} · ${['00','04','08','12','16','20'][ci]}:00 — ${arts.length} ${arts.length===1?'story':'stories'}\n${arts.map(a=>a.headline).join('\n')}`}
+                style={{
+                  height:18,
+                  background: isActive
+                    ? T.ink0
+                    : `color-mix(in oklab, ${fg} ${Math.round(intensity*100)}%, transparent)`,
+                  border: isActive ? `2px solid ${T.accent}` : `1px solid ${T.rule2}`,
+                  position:'relative',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontWeight:700, fontSize:9,
+                  color: isActive ? T.accent : '#fff',
+                  cursor:'pointer',
+                  transition: 'border .1s, background .1s',
+                }}>
                 {arts.length}
                 {hasP1 && <span style={{ position:'absolute', top:2, right:2, width:4, height:4,
-                                         background:'#fff', borderRadius:'50%' }}/>}
+                                         background: isActive ? T.accent : '#fff', borderRadius:'50%' }}/>}
               </div>
             );
           })}
@@ -1037,6 +1055,9 @@ function HifiDesktop({ day, searchQ, setSearchQ }) {
   const [sent,     setSent]     = React.useState(null);
   const [cat,      setCat]      = React.useState(null);
   const [ticker,   setTicker]   = React.useState(null);
+  const [bucket,   setBucket]   = React.useState(null); // set only via heatmap click
+
+  const BUCKET_LABELS = ['00:00–03:59','04:00–07:59','08:00–11:59','12:00–15:59','16:00–19:59','20:00–23:59'];
 
   const filtered = React.useMemo(() => {
     const q = searchQ.trim().toLowerCase();
@@ -1045,6 +1066,7 @@ function HifiDesktop({ day, searchQ, setSearchQ }) {
       if (sent   && a.sentiment !== sent) return false;
       if (cat    && !a.cats.includes(cat)) return false;
       if (ticker && !a.tickers.includes(ticker)) return false;
+      if (bucket !== null && Math.floor(a.hr / 4) !== bucket) return false;
       if (q) {
         const blob = [a.headline, a.summary, ...a.tickers, ...a.cats, a.source, a.implication]
                        .join(' ').toLowerCase();
@@ -1052,14 +1074,23 @@ function HifiDesktop({ day, searchQ, setSearchQ }) {
       }
       return true;
     });
-  }, [D.articles, searchQ, prio, sent, cat, ticker]);
+  }, [D.articles, searchQ, prio, sent, cat, ticker, bucket]);
 
   const byHour = {};
   filtered.forEach(a => { (byHour[a.hr] = byHour[a.hr] || []).push(a); });
   const hours = Object.keys(byHour).map(Number).sort((a,b) => b - a);
-  const anyFilter = !!(searchQ || prio || sent || cat || ticker);
-  const clearAll  = () => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); setTicker(null); };
+  const anyFilter = !!(searchQ || prio || sent || cat || ticker || bucket !== null);
+  const clearAll  = () => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); setTicker(null); setBucket(null); };
   const onTickerClick = (t) => setTicker(curr => curr === t ? null : t);
+
+  // Heatmap cell click: set both cat + bucket together (or clear if same cell clicked again)
+  const onHeatmapClick = (clickedCat, clickedBucket) => {
+    if (cat === clickedCat && bucket === clickedBucket) {
+      setCat(null); setBucket(null);
+    } else {
+      setCat(clickedCat); setBucket(clickedBucket);
+    }
+  };
 
   // Sidebar section — template style with top border separator
   const SidebarSection = ({ label, count, children, first }) => (
@@ -1096,8 +1127,10 @@ function HifiDesktop({ day, searchQ, setSearchQ }) {
                    sent={sent} setSent={setSent}/>
         {anyFilter && (
           <ActiveFilters searchQ={searchQ} prio={prio} sent={sent} cat={cat} ticker={ticker}
+                         bucket={bucket} bucketLabel={bucket !== null ? BUCKET_LABELS[bucket] : null}
                          setSearchQ={setSearchQ} setPrio={setPrio} setSent={setSent}
-                         setCat={setCat} setTicker={setTicker} clearAll={clearAll}
+                         setCat={setCat} setTicker={setTicker} setBucket={setBucket}
+                         clearAll={clearAll}
                          count={filtered.length} total={D.articles.length}/>
         )}
       </div>
@@ -1217,7 +1250,7 @@ function HifiDesktop({ day, searchQ, setSearchQ }) {
           </SidebarSection>
 
           <SidebarSection label="Heatmap · cat × hour" count={`${D.stats.total} stories`}>
-            <SidebarHeatmap day={D}/>
+            <SidebarHeatmap day={D} activeCat={cat} activeBucket={bucket} onCellClick={onHeatmapClick}/>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6,
                           fontFamily: T.fontSans, fontSize: 10, color: T.ink3 }}>
               <span><span style={{ display: 'inline-block', width: 6, height: 6,
