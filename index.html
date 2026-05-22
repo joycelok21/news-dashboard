@@ -729,7 +729,7 @@ function HourlyTimeline({ D }) {
   );
 }
 
-function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
+function FilterRow({ D, cat, toggleCat, prio, togglePrio, sent, toggleSent }) {
   const { tokens: T } = window.HF;
   const cats = window.NEWS_DATA.categories;
 
@@ -776,16 +776,16 @@ function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
       flexWrap: 'wrap',
       minHeight: 44,
     }}>
-      <FilterCat on={!cat} onClick={() => setCat(null)}>All</FilterCat>
+      <FilterCat on={cat.size === 0} onClick={() => toggleCat(null)}>All</FilterCat>
       <span style={{ width: 1, height: 14, background: T.rule2, margin: '0 2px' }}/>
       {cats.map(c => (
-        <FilterCat key={c} on={cat === c} onClick={() => setCat(cat === c ? null : c)}>{c}</FilterCat>
+        <FilterCat key={c} on={cat.has(c)} onClick={() => toggleCat(c)}>{c}</FilterCat>
       ))}
       <div style={{ flex: 1 }}/>
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '0 6px' }}>
         {[{ v: 'P1' }, { v: 'P2' }, { v: 'P3' }].map(opt => (
-          <FilterToggle key={opt.v} on={prio === opt.v}
-            onClick={() => setPrio(prio === opt.v ? null : opt.v)}>{opt.v}</FilterToggle>
+          <FilterToggle key={opt.v} on={prio.has(opt.v)}
+            onClick={() => togglePrio(opt.v)}>{opt.v}</FilterToggle>
         ))}
         <span style={{ width: 1, height: 14, background: T.rule2, margin: '0 5px' }}/>
         {[
@@ -793,8 +793,8 @@ function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
           { v: 'bear', label: 'Bear', accent: T.bear },
           { v: 'mixed', label: 'Mix', accent: T.mixed },
         ].map(opt => (
-          <FilterToggle key={opt.v} on={sent === opt.v} accent={opt.accent}
-            onClick={() => setSent(sent === opt.v ? null : opt.v)}>{opt.label}</FilterToggle>
+          <FilterToggle key={opt.v} on={sent.has(opt.v)} accent={opt.accent}
+            onClick={() => toggleSent(opt.v)}>{opt.label}</FilterToggle>
         ))}
       </div>
     </div>
@@ -802,7 +802,7 @@ function FilterRow({ D, cat, setCat, prio, setPrio, sent, setSent }) {
 }
 
 function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
-                          setSearchQ, setPrio, setSent, setCat, setTicker, setBucket,
+                          setSearchQ, togglePrio, toggleSent, toggleCat, setTicker, setBucket,
                           clearAll, count, total }) {
   const { tokens: T } = window.HF;
   const FilterChip = ({ label, onClear }) => (
@@ -819,6 +819,8 @@ function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
                                          fontSize:11, lineHeight:1 }}>×</button>
     </span>
   );
+  // When bucket is active, the paired cat is shown as a combined chip
+  const bucketCat = bucket !== null ? [...cat][0] : null;
   return (
     <div style={{ padding:'8px 24px', background: T.accentSub,
                   borderBottom:`1px solid ${T.rule2}`,
@@ -829,16 +831,21 @@ function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
         {count} <span style={{ color: T.ink3 }}>of {total} stories</span>
       </span>
       <span style={{ width:1, height:14, background: T.rule2 }}/>
-      {searchQ    && <FilterChip label={`"${searchQ}"`} onClear={() => setSearchQ('')}/>}
-      {ticker     && <FilterChip label={`Ticker · ${ticker}`} onClear={() => setTicker(null)}/>}
-      {cat        && !bucket && <FilterChip label={`Category · ${cat}`} onClear={() => setCat(null)}/>}
-      {prio       && <FilterChip label={`Priority · ${prio}`} onClear={() => setPrio(null)}/>}
-      {sent       && <FilterChip label={`Sentiment · ${sent}`} onClear={() => setSent(null)}/>}
-      {bucket !== null && bucketLabel && (
-        <FilterChip
-          label={`${cat} · ${bucketLabel}`}
-          onClear={() => { setCat(null); setBucket(null); }}/>
-      )}
+      {searchQ && <FilterChip label={`"${searchQ}"`} onClear={() => setSearchQ('')}/>}
+      {ticker  && <FilterChip label={`Ticker · ${ticker}`} onClear={() => setTicker(null)}/>}
+      {bucket !== null && bucketLabel && bucketCat
+        ? <FilterChip label={`${bucketCat} · ${bucketLabel}`}
+                      onClear={() => { toggleCat(bucketCat); setBucket(null); }}/>
+        : [...cat].map(c => (
+            <FilterChip key={c} label={`Category · ${c}`} onClear={() => toggleCat(c)}/>
+          ))
+      }
+      {[...prio].map(v => (
+        <FilterChip key={v} label={`Priority · ${v}`} onClear={() => togglePrio(v)}/>
+      ))}
+      {[...sent].map(v => (
+        <FilterChip key={v} label={`Sentiment · ${v}`} onClear={() => toggleSent(v)}/>
+      ))}
       <div style={{ flex:1 }}/>
       <button onClick={clearAll} style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
                                            color: T.accent, background:'transparent',
@@ -1006,7 +1013,7 @@ function SidebarHeatmap({ day, activeCat, activeBucket, onCellClick }) {
                         lineHeight:'16px', overflow:'hidden', whiteSpace:'nowrap',
                         textOverflow:'ellipsis', paddingRight:4 }}>{c}</div>
           {counts[ri].map((arts, ci) => {
-            const isActive = activeCat === c && activeBucket === ci;
+            const isActive = activeCat instanceof Set ? (activeCat.has(c) && activeBucket === ci) : (activeCat === c && activeBucket === ci);
             if (!arts.length) return (
               <div key={ci} style={{ height:18, background: T.surface, border:`1px solid ${T.rule2}` }}/>
             );
@@ -1051,23 +1058,31 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
   const D = day || window.NEWS_DATA;
   const { tokens: T, Eyebrow, SectionHeader, SentBadge } = window.HF;
 
-  const [prio,     setPrio]     = React.useState(null);
-  const [sent,     setSent]     = React.useState(null);
-  const [cat,      setCat]      = React.useState(initialCat || null);
+  const [prio,     setPrio]     = React.useState(new Set());
+  const [sent,     setSent]     = React.useState(new Set());
+  const [cat,      setCat]      = React.useState(initialCat ? new Set([initialCat]) : new Set());
 
   // Sync when navigating from overview heatmap with a pre-set category
-  React.useEffect(() => { setCat(initialCat || null); }, [initialCat]);
+  React.useEffect(() => { setCat(initialCat ? new Set([initialCat]) : new Set()); setBucket(null); }, [initialCat]);
   const [ticker,   setTicker]   = React.useState(null);
   const [bucket,   setBucket]   = React.useState(null); // set only via heatmap click
 
   const BUCKET_LABELS = ['00:00–03:59','04:00–07:59','08:00–11:59','12:00–15:59','16:00–19:59','20:00–23:59'];
 
+  const togglePrio = (v) => setPrio(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; });
+  const toggleSent = (v) => setSent(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; });
+  const toggleCat  = (c) => {
+    if (!c) { setCat(new Set()); setBucket(null); return; }
+    setCat(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
+    if (bucket !== null) setBucket(null); // clear time filter when cats change manually
+  };
+
   const filtered = React.useMemo(() => {
     const q = searchQ.trim().toLowerCase();
     return D.articles.filter(a => {
-      if (prio   && a.priority !== prio) return false;
-      if (sent   && a.sentiment !== sent) return false;
-      if (cat    && !a.cats.includes(cat)) return false;
+      if (prio.size   > 0 && !prio.has(a.priority)) return false;
+      if (sent.size   > 0 && !sent.has(a.sentiment)) return false;
+      if (cat.size    > 0 && !a.cats.some(c => cat.has(c))) return false;
       if (ticker && !a.tickers.includes(ticker)) return false;
       if (bucket !== null && Math.floor(a.hr / 4) !== bucket) return false;
       if (q) {
@@ -1082,16 +1097,17 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
   const byHour = {};
   filtered.forEach(a => { (byHour[a.hr] = byHour[a.hr] || []).push(a); });
   const hours = Object.keys(byHour).map(Number).sort((a,b) => b - a);
-  const anyFilter = !!(searchQ || prio || sent || cat || ticker || bucket !== null);
-  const clearAll  = () => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); setTicker(null); setBucket(null); };
+  const anyFilter = !!(searchQ || prio.size > 0 || sent.size > 0 || cat.size > 0 || ticker || bucket !== null);
+  const clearAll  = () => { setSearchQ(''); setPrio(new Set()); setSent(new Set()); setCat(new Set()); setTicker(null); setBucket(null); };
   const onTickerClick = (t) => setTicker(curr => curr === t ? null : t);
 
-  // Heatmap cell click: set both cat + bucket together (or clear if same cell clicked again)
+  // Heatmap cell click: replaces cat selection with exactly this one cat + sets bucket
   const onHeatmapClick = (clickedCat, clickedBucket) => {
-    if (cat === clickedCat && bucket === clickedBucket) {
-      setCat(null); setBucket(null);
+    const alreadyActive = cat.size === 1 && cat.has(clickedCat) && bucket === clickedBucket;
+    if (alreadyActive) {
+      setCat(new Set()); setBucket(null);
     } else {
-      setCat(clickedCat); setBucket(clickedBucket);
+      setCat(new Set([clickedCat])); setBucket(clickedBucket);
     }
   };
 
@@ -1126,13 +1142,13 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
       <div style={{ flexShrink: 0, padding: '0 28px', background: T.surface,
                     borderBottom: `1px solid ${T.rule2}`,
                     boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-        <FilterRow D={D} cat={cat} setCat={setCat} prio={prio} setPrio={setPrio}
-                   sent={sent} setSent={setSent}/>
+        <FilterRow D={D} cat={cat} toggleCat={toggleCat} prio={prio} togglePrio={togglePrio}
+                   sent={sent} toggleSent={toggleSent}/>
         {anyFilter && (
           <ActiveFilters searchQ={searchQ} prio={prio} sent={sent} cat={cat} ticker={ticker}
                          bucket={bucket} bucketLabel={bucket !== null ? BUCKET_LABELS[bucket] : null}
-                         setSearchQ={setSearchQ} setPrio={setPrio} setSent={setSent}
-                         setCat={setCat} setTicker={setTicker} setBucket={setBucket}
+                         setSearchQ={setSearchQ} togglePrio={togglePrio} toggleSent={toggleSent}
+                         toggleCat={toggleCat} setTicker={setTicker} setBucket={setBucket}
                          clearAll={clearAll}
                          count={filtered.length} total={D.articles.length}/>
         )}
@@ -1757,16 +1773,20 @@ function MobileDayView({ day }) {
   const { tokens: T, moodColor, moodLabel, Eyebrow, CatLabel, Chip } = window.HF;
   const D = day;
   const [searchQ, setSearchQ] = React.useState('');
-  const [prio,    setPrio]    = React.useState(null);
-  const [sent,    setSent]    = React.useState(null);
-  const [cat,     setCat]     = React.useState(null);
+  const [prio,    setPrio]    = React.useState(new Set());
+  const [sent,    setSent]    = React.useState(new Set());
+  const [cat,     setCat]     = React.useState(new Set());
+
+  const togglePrioM = (v) => setPrio(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; });
+  const toggleSentM = (v) => setSent(prev => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; });
+  const toggleCatM  = (c) => setCat(prev => { const n = new Set(prev); n.has(c) ? n.delete(c) : n.add(c); return n; });
 
   const filtered = React.useMemo(() => {
     const q = searchQ.trim().toLowerCase();
     return D.articles.filter(a => {
-      if (prio && a.priority !== prio) return false;
-      if (sent && a.sentiment !== sent) return false;
-      if (cat  && !a.cats.includes(cat)) return false;
+      if (prio.size > 0 && !prio.has(a.priority)) return false;
+      if (sent.size > 0 && !sent.has(a.sentiment)) return false;
+      if (cat.size  > 0 && !a.cats.some(c => cat.has(c))) return false;
       if (q) {
         const blob = [a.headline, a.summary, ...a.tickers, ...a.cats, a.source].join(' ').toLowerCase();
         if (!blob.includes(q)) return false;
@@ -1834,13 +1854,13 @@ function MobileDayView({ day }) {
           )}
         </div>
         <div style={{ display:'flex', gap:4, overflowX:'auto', whiteSpace:'nowrap', paddingBottom:2 }}>
-          <Chip on={!cat && !prio && !sent} onClick={() => { setCat(null); setPrio(null); setSent(null); }}>All</Chip>
-          <Chip on={prio==='P1'} onClick={() => setPrio(prio==='P1' ? null : 'P1')}>P1</Chip>
-          <Chip on={prio==='P2'} onClick={() => setPrio(prio==='P2' ? null : 'P2')}>P2</Chip>
-          <Chip on={sent==='bull'} onClick={() => setSent(sent==='bull' ? null : 'bull')}>Bull</Chip>
-          <Chip on={sent==='bear'} onClick={() => setSent(sent==='bear' ? null : 'bear')}>Bear</Chip>
+          <Chip on={cat.size===0 && prio.size===0 && sent.size===0} onClick={() => { setCat(new Set()); setPrio(new Set()); setSent(new Set()); }}>All</Chip>
+          <Chip on={prio.has('P1')} onClick={() => togglePrioM('P1')}>P1</Chip>
+          <Chip on={prio.has('P2')} onClick={() => togglePrioM('P2')}>P2</Chip>
+          <Chip on={sent.has('bull')} onClick={() => toggleSentM('bull')}>Bull</Chip>
+          <Chip on={sent.has('bear')} onClick={() => toggleSentM('bear')}>Bear</Chip>
           {window.NEWS_DATA.categories.map(c => (
-            <Chip key={c} on={cat===c} onClick={() => setCat(cat===c ? null : c)}>{c}</Chip>
+            <Chip key={c} on={cat.has(c)} onClick={() => toggleCatM(c)}>{c}</Chip>
           ))}
         </div>
       </div>
@@ -1850,7 +1870,7 @@ function MobileDayView({ day }) {
           <div style={{ padding:'40px 16px', textAlign:'center', color: T.ink3 }}>
             <div style={{ fontFamily: T.fontDisplay, fontSize:16, fontWeight:600,
                           color: T.ink2, fontStyle:'italic', marginBottom:4 }}>No stories match.</div>
-            <button onClick={() => { setSearchQ(''); setPrio(null); setSent(null); setCat(null); }}
+            <button onClick={() => { setSearchQ(''); setPrio(new Set()); setSent(new Set()); setCat(new Set()); }}
               style={{ fontFamily: T.fontSans, fontSize:11, fontWeight:600,
                        color: T.accent, background:'transparent', border:0, cursor:'pointer' }}>Clear filters →</button>
           </div>
