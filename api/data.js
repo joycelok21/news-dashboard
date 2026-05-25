@@ -102,7 +102,7 @@ function formatDateShort(dateKey) {
 }
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=7200');
+  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 

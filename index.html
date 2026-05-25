@@ -2420,9 +2420,10 @@ function App() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const fetchData = React.useCallback(() => {
+  const fetchData = React.useCallback((bust = false) => {
     setLoading(true);
-    fetch('/api/data')
+    const url = bust ? `/api/data?t=${Date.now()}` : '/api/data';
+    fetch(url)
       .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
       .then(d => {
         if (d.error) throw new Error(d.error);
@@ -2449,7 +2450,7 @@ function App() {
                       color:'var(--ink-2)', fontStyle:'italic' }}>Could not load data</div>
         <div style={{ fontFamily:'"Hanken Grotesk",sans-serif', fontSize:13, color:'var(--ink-3)',
                       maxWidth:420, lineHeight:1.5 }}>{error}</div>
-        <button onClick={fetchData}
+        <button onClick={() => fetchData(true)}
           style={{ fontFamily:'"Hanken Grotesk",sans-serif', fontSize:13, fontWeight:600,
                    color:'#fff', background:'var(--accent)', border:0,
                    borderRadius:999, padding:'9px 22px', cursor:'pointer' }}>Try again</button>
@@ -2468,7 +2469,7 @@ function App() {
 
   return (
     <DashboardShell tabs={data.days} active={activeTab} onSelect={handleTabSelect}
-                    onRefresh={fetchData} loading={loading}
+                    onRefresh={() => fetchData(true)} loading={loading}
                     searchQ={searchQ} setSearchQ={setSearchQ}>
       {activeTab === 'overview'
         ? <HifiOverview days={data.days} weekThemes={data.weekThemes || []} onSelectDay={handleTabSelect}/>
