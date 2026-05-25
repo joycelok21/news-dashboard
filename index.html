@@ -459,6 +459,7 @@ function addPeriod(s) {
 function DigestBanner({ D }) {
   const { tokens: T, moodColor, moodLabel, CatLabel } = window.HF;
   const [open, setOpen] = React.useState(true);
+  const [tab,  setTab]  = React.useState('brief'); // 'brief' | 'second' | 'trading'
   const mc = moodColor(D.mood);
   const ml = moodLabel(D.mood);
   const bull = D.articles.filter(a => a.sentiment === 'bull').length;
@@ -468,6 +469,70 @@ function DigestBanner({ D }) {
   const eyebrowStyle = {
     fontFamily: T.fontSans, fontSize: 9.5, fontWeight: 700,
     letterSpacing: '.18em', textTransform: 'uppercase', color: T.accent,
+  };
+
+  const TABS = [
+    { id: 'brief',   label: 'Market Brief' },
+    { id: 'second',  label: 'Second Order' },
+    { id: 'trading', label: 'Trading Brief' },
+  ];
+
+  // Reusable sentence list renderer
+  const SentencePanel = ({ text, leadQuote, emptyMsg, accentColor }) => {
+    const sentences = splitSentences(text);
+    if (!sentences.length) return (
+      <p style={{ fontFamily: T.fontDisplay, fontSize: 13, color: T.ink3,
+                  margin: 0, fontStyle: 'italic' }}>{emptyMsg}</p>
+    );
+    if (leadQuote) {
+      const [lead, ...rest] = sentences;
+      return (
+        <div>
+          <p style={{
+            fontFamily: T.fontDisplay, fontSize: 15, fontStyle: 'italic',
+            lineHeight: 1.6, color: T.ink0, margin: '0 0 12px',
+            paddingLeft: 22, position: 'relative',
+          }}>
+            <span style={{
+              position: 'absolute', left: 0, top: -4,
+              fontFamily: T.fontDisplay, fontSize: 38,
+              color: accentColor || T.accent, lineHeight: 1,
+            }}>"</span>
+            {addPeriod(lead)}
+          </p>
+          {rest.length > 0 && (
+            <ul style={{ margin: 0, padding: 0, listStyle: 'none',
+                         display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {rest.map((s, i) => (
+                <li key={i} style={{
+                  fontFamily: T.fontSans, fontSize: 13, lineHeight: 1.55,
+                  color: T.ink2, paddingLeft: 14, position: 'relative',
+                }}>
+                  <span style={{ position: 'absolute', left: 0, top: 8,
+                                 width: 5, height: 1, background: T.ink4, display: 'block' }}/>
+                  {addPeriod(s)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      );
+    }
+    return (
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none',
+                   display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {sentences.map((s, i) => (
+          <li key={i} style={{
+            fontFamily: T.fontSans, fontSize: 13, lineHeight: 1.5,
+            color: T.ink2, paddingLeft: 14, position: 'relative',
+          }}>
+            <span style={{ position: 'absolute', left: 0, top: 8,
+                           width: 5, height: 1, background: T.ink4, display: 'block' }}/>
+            {addPeriod(s)}
+          </li>
+        ))}
+      </ul>
+    );
   };
 
   // Collapsed: slim bar
@@ -500,7 +565,7 @@ function DigestBanner({ D }) {
     );
   }
 
-  // Expanded: editorial box
+  // Expanded: tab-based editorial box
   return (
     <div style={{
       background: T.surface,
@@ -508,7 +573,7 @@ function DigestBanner({ D }) {
       borderRadius: 4, marginBottom: 32,
       boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
     }}>
-      {/* Header row — entire row is clickable to collapse */}
+      {/* Header row — clickable to collapse */}
       <div onClick={() => setOpen(false)}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -557,100 +622,52 @@ function DigestBanner({ D }) {
         </span>
       </div>
 
-      {/* Two-column body */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr' }}>
-        {/* Left: today's brief */}
-        <div style={{ padding: '16px 22px 20px' }}>
-          <div style={{
-            fontFamily: T.fontSans, fontSize: 9.5, fontWeight: 700,
-            letterSpacing: '.18em', textTransform: 'uppercase', color: T.accent,
-            marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            Today's Brief
-            <span style={{ flex: 1, height: 1, background: T.rule2, display: 'block' }}/>
-          </div>
-          {(() => {
-            const sentences = splitSentences(D.digest.body);
-            if (!sentences.length) return (
-              <p style={{ fontFamily: T.fontDisplay, fontSize: 13, color: T.ink3,
-                          margin: 0, fontStyle: 'italic' }}>
-                No digest available for this day.
-              </p>
-            );
-            const [lead, ...rest] = sentences;
-            return (
-              <div>
-                <p style={{
-                  fontFamily: T.fontDisplay, fontSize: 15, fontStyle: 'italic',
-                  lineHeight: 1.6, color: T.ink0, margin: '0 0 12px',
-                  paddingLeft: 22, position: 'relative',
-                }}>
-                  <span style={{
-                    position: 'absolute', left: 0, top: -4,
-                    fontFamily: T.fontDisplay, fontSize: 38, color: T.accent, lineHeight: 1,
-                  }}>"</span>
-                  {addPeriod(lead)}
-                </p>
-                {rest.length > 0 && (
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none',
-                               display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {rest.map((s, i) => (
-                      <li key={i} style={{
-                        fontFamily: T.fontSans, fontSize: 13, lineHeight: 1.55,
-                        color: T.ink2, paddingLeft: 14, position: 'relative',
-                      }}>
-                        <span style={{ position: 'absolute', left: 0, top: 8,
-                                       width: 5, height: 1, background: T.ink4, display: 'block' }}/>
-                        {addPeriod(s)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })()}
-        </div>
+      {/* Tab strip — stops propagation so clicking tabs doesn't collapse the banner */}
+      <div onClick={e => e.stopPropagation()}
+           style={{ display: 'flex', gap: 4, padding: '8px 20px 0',
+                    borderBottom: `1px solid ${T.rule2}` }}>
+        {TABS.map(t => {
+          const active = tab === t.id;
+          // Indicate if Trading Brief has content
+          const hasDot = t.id === 'trading' && D.digest.tradingBrief;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              fontFamily: T.fontSans, fontSize: 11, fontWeight: active ? 700 : 500,
+              color: active ? T.ink0 : T.ink3,
+              background: 'transparent', border: 'none',
+              borderBottom: `2px solid ${active ? T.ink0 : 'transparent'}`,
+              padding: '4px 10px 8px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+              transition: 'color .12s',
+            }}>
+              {t.label}
+              {hasDot && !active && (
+                <span style={{ width: 5, height: 5, borderRadius: '50%',
+                               background: T.accent, display: 'inline-block' }}/>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-        {/* Vertical divider */}
-        <div style={{ background: T.rule, margin: '14px 0' }}/>
-
-        {/* Right: second-order impacts */}
-        <div style={{ padding: '16px 22px 20px' }}>
-          <div style={{
-            fontFamily: T.fontSans, fontSize: 9.5, fontWeight: 700,
-            letterSpacing: '.18em', textTransform: 'uppercase', color: T.ink3,
-            marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            Second-Order Impacts
-            <span style={{ flex: 1, height: 1, background: T.rule2, display: 'block' }}/>
-          </div>
-          {(() => {
-            const sentences = splitSentences(D.digest.secondOrder);
-            if (!sentences.length) return (
-              <p style={{ fontFamily: T.fontDisplay, fontSize: 13, color: T.ink3,
-                          margin: 0, fontStyle: 'italic' }}>—</p>
-            );
-            return (
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none',
-                           display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {sentences.map((s, i) => (
-                  <li key={i} style={{
-                    fontFamily: T.fontSans, fontSize: 13, lineHeight: 1.5,
-                    color: T.ink2, paddingLeft: 14, position: 'relative',
-                  }}>
-                    <span style={{ position: 'absolute', left: 0, top: 8,
-                                   width: 5, height: 1, background: T.ink4, display: 'block' }}/>
-                    {addPeriod(s)}
-                  </li>
-                ))}
-              </ul>
-            );
-          })()}
-        </div>
+      {/* Content panel */}
+      <div style={{ padding: '18px 22px 16px' }}>
+        {tab === 'brief' && (
+          <SentencePanel text={D.digest.body} leadQuote={true}
+            emptyMsg="No digest available for this day." accentColor={T.accent}/>
+        )}
+        {tab === 'second' && (
+          <SentencePanel text={D.digest.secondOrder} leadQuote={false}
+            emptyMsg="No second-order analysis available." accentColor={T.accent}/>
+        )}
+        {tab === 'trading' && (
+          <SentencePanel text={D.digest.tradingBrief} leadQuote={true}
+            emptyMsg="No trading brief available for this day." accentColor={T.bull}/>
+        )}
       </div>
 
       {/* Scroll hint */}
-      <div style={{ padding: '6px 20px 10px', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ padding: '2px 20px 10px', display: 'flex', justifyContent: 'flex-end' }}>
         <span style={{ fontFamily: T.fontSans, fontSize: 10, color: T.ink4,
                        letterSpacing: '.06em' }}>
           scroll down to read the news ↓
@@ -1403,11 +1420,19 @@ function HifiOverview({ days, weekThemes, onSelectDay }) {
                     {d.stats.total} stories · {d.stats.p12} priority
                   </div>
                   <p style={{ fontFamily: T.fontDisplay, fontWeight: 600, fontSize: 13.5,
-                               lineHeight: 1.3, margin: 0, color: T.ink0, fontStyle: 'italic',
-                               display: '-webkit-box', WebkitLineClamp: 3,
+                               lineHeight: 1.3, margin: '0 0 6px', color: T.ink0, fontStyle: 'italic',
+                               display: '-webkit-box', WebkitLineClamp: 2,
                                WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {d.digest.body ? d.digest.body.substring(0, 140) + '…' : `${d.dateShort} market brief`}
                   </p>
+                  {d.digest.tradingBrief && (
+                    <p style={{ fontFamily: T.fontSans, fontSize: 11, lineHeight: 1.4,
+                                margin: '0 0 6px', color: T.ink3, fontStyle: 'italic',
+                                display: '-webkit-box', WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {d.digest.tradingBrief.substring(0, 110) + '…'}
+                    </p>
+                  )}
                   <div style={{ display: 'flex', gap: 8, marginTop: 'auto', paddingTop: 4,
                                 fontFamily: T.fontSans, fontSize: 11, color: T.ink2 }}>
                     <span style={{ color: T.bull }}>↑ {bull}</span>
@@ -2003,11 +2028,19 @@ function MobileOverview({ days, weekThemes, onSelectDay }) {
                   </span>
                 </div>
                 <p style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:13.5,
-                             lineHeight:1.25, margin:0, color: T.ink0,
+                             lineHeight:1.25, margin:'0 0 4px', color: T.ink0,
                              display:'-webkit-box', WebkitLineClamp:2,
                              WebkitBoxOrient:'vertical', overflow:'hidden' }}>
                   {d.digest.body ? d.digest.body.substring(0,120) + '…' : `${d.dateShort} market brief`}
                 </p>
+                {d.digest.tradingBrief && (
+                  <p style={{ fontFamily: T.fontSans, fontSize:10.5, lineHeight:1.35,
+                              margin:'0 0 4px', color: T.ink3, fontStyle:'italic',
+                              display:'-webkit-box', WebkitLineClamp:2,
+                              WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+                    {d.digest.tradingBrief.substring(0,100) + '…'}
+                  </p>
+                )}
                 <div style={{ display:'flex', gap:8, fontFamily: T.fontMono, fontSize:10, color: T.ink2 }}>
                   <span style={{ color: T.bull }}>↑ {bull}</span>
                   <span style={{ color: T.bear }}>↓ {bear}</span>

@@ -176,7 +176,7 @@ module.exports = async function handler(req, res) {
     const summaryByDate = {};
     summaryRows.forEach(row => {
       const [runTimestamp, date, summary, secondOrder, totalArticles,
-             dominantSentiment, keyThemes] = row;
+             dominantSentiment, keyThemes, tradingBrief] = row;
 
       const dateKey = extractDateKey(date) || extractDateKey(runTimestamp);
       if (!dateKey) return;
@@ -184,6 +184,7 @@ module.exports = async function handler(req, res) {
       summaryByDate[dateKey] = {
         body: (summary || '').trim(),
         secondOrder: (secondOrder || '').trim(),
+        tradingBrief: (tradingBrief || '').trim(),
         themes: splitList(keyThemes),
         mood: normalizeSentiment(dominantSentiment),
         totalFromSheet: parseInt(totalArticles) || 0,
@@ -246,6 +247,7 @@ module.exports = async function handler(req, res) {
         digest: {
           body: sm.body || '',
           secondOrder: sm.secondOrder || '',
+          tradingBrief: sm.tradingBrief || '',
           themes: digestThemes,
         },
         tickers: allTickers,
