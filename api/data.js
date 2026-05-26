@@ -102,7 +102,16 @@ function formatDateShort(dateKey) {
 }
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+  const dateFilter = (req.query && req.query.date)
+    ? String(req.query.date).trim().match(/^\d{4}-\d{2}-\d{2}$/)
+      ? req.query.date.trim()
+      : null
+    : null;
+
+  // Historical dates never change — cache them for 24 h
+  res.setHeader('Cache-Control', dateFilter
+    ? 's-maxage=86400, stale-while-revalidate=3600'
+    : 's-maxage=300, stale-while-revalidate=600');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -191,6 +200,59 @@ module.exports = async function handler(req, res) {
         refreshedRaw: String(runTimestamp || date),
       };
     });
+
+    // ── Single-date query (calendar picker) ──────────────────────────────
+    if (dateFilter) {
+      const buildDay = (dateKey) => {
+        const articles = (articlesByDate[dateKey] || [])
+          .sort((a, b) => a.hr - b.hr || b.time.localeCompare(a.time));
+        const sm = summaryByDate[dateKey] || {};
+
+        const mood = sm.mood || (() => {
+          const bull = articles.filter(a => a.sentiment === 'bull').length;
+          const bear = articles.filter(a => a.sentiment === 'bear').length;
+          if (bull > bear) return 'bull';
+          if (bear > bull) return 'bear';
+          return 'mixed';
+        })();
+
+        const tickerCounts = {};
+        articles.forEach(a => { a.tickers.forEach(t => { tickerCounts[t] = (tickerCounts[t] || 0) + 1; }); });
+        const allTickers = Object.entries(tickerCounts).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([t]) => t);
+
+        const p12 = articles.filter(a => a.priority === 'P1' || a.priority === 'P2').length;
+        const sources = new Set(articles.map(a => a.source)).size;
+
+        const digestThemes = (sm.themes && sm.themes.length > 0)
+          ? sm.themes
+          : [...new Set(articles.flatMap(a => a.cats))].slice(0, 8);
+
+        let refreshed = formatDateLabel(dateKey);
+        if (sm.refreshedRaw) {
+          const t = extractTime(sm.refreshedRaw);
+          if (t !== '09:00') refreshed += `, ${t}`;
+        }
+
+        return {
+          date: formatDateLabel(dateKey),
+          dateShort: formatDateShort(dateKey),
+          dateKey,
+          refreshed,
+          mood,
+          digest: {
+            body: sm.body || '',
+            secondOrder: sm.secondOrder || '',
+            tradingBrief: sm.tradingBrief || '',
+            themes: digestThemes,
+          },
+          tickers: allTickers,
+          stats: { p12, total: articles.length, sources },
+          articles,
+        };
+      };
+
+      return res.status(200).json({ day: buildDay(dateFilter), categories: CATEGORIES });
+    }
 
     // Get last 5 dates, newest first
     const allDates = [...new Set([

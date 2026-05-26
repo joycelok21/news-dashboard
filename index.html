@@ -1194,12 +1194,18 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
                           borderRadius: 4 }}>
               <div style={{ fontFamily: T.fontDisplay, fontSize: 22, fontWeight: 600,
                              color: T.ink2, marginBottom: 6, fontStyle: 'italic' }}>
-                No stories match.
+                {D.articles.length === 0 ? 'No data for this date.' : 'No stories match.'}
               </div>
-              <button onClick={clearAll}
-                style={{ fontFamily: T.fontSans, fontSize: 12, fontWeight: 600, color: '#fff',
-                         background: T.ink1, border: 0, borderRadius: 999,
-                         padding: '7px 18px', cursor: 'pointer' }}>Clear all filters</button>
+              {D.articles.length === 0 ? (
+                <div style={{ fontFamily: T.fontSans, fontSize: 13, color: T.ink3, maxWidth: 320, margin: '0 auto' }}>
+                  No news was collected for {D.date}. Try selecting a different date.
+                </div>
+              ) : (
+                <button onClick={clearAll}
+                  style={{ fontFamily: T.fontSans, fontSize: 12, fontWeight: 600, color: '#fff',
+                           background: T.ink1, border: 0, borderRadius: 999,
+                           padding: '7px 18px', cursor: 'pointer' }}>Clear all filters</button>
+              )}
             </div>
           ) : (
             hours.map(h => (
@@ -2231,11 +2237,27 @@ function HifiMobile() {
 
 // ─── Desktop shell + tab nav ─────────────────────────────────────────────────
 
-function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children, searchQ, setSearchQ }) {
+function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children, searchQ, setSearchQ,
+                          calendarDate, calendarMood, onCalendarSelect, onCalendarClose }) {
   const { tokens: T, moodColor, moodLabel } = window.HF;
   const [theme, setTheme] = React.useState(
     document.documentElement.getAttribute('data-theme') || 'light'
   );
+  const [calOpen, setCalOpen] = React.useState(false);
+  const calRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!calOpen) return;
+    const handler = (e) => { if (calRef.current && !calRef.current.contains(e.target)) setCalOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [calOpen]);
+
+  const fmtDateShort = (dateKey) => {
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const [, m, d] = dateKey.split('-');
+    return `${parseInt(d)} ${MONTHS[parseInt(m) - 1]}`;
+  };
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
@@ -2357,6 +2379,96 @@ function DashboardShell({ tabs, active, onSelect, onRefresh, loading, children, 
                    eyebrow={i === 0 ? 'today' : i === 1 ? 'yesterday' : `${i} days ago`}
                    active={active === d.dateKey} onClick={() => onSelect(d.dateKey)} mood={d.mood}/>
             ))}
+
+            {/* Calendar-selected date tab */}
+            {calendarDate && (
+              <div style={{ display: 'flex', alignItems: 'stretch', flexShrink: 0,
+                            borderLeft: `1px solid ${T.rule}` }}>
+                <button onClick={() => onSelect(calendarDate)}
+                  style={{
+                    background: 'transparent', border: 0, cursor: 'pointer',
+                    padding: '12px 16px 10px 20px',
+                    borderBottom: `3px solid ${active === calendarDate ? T.accent : 'transparent'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    color: active === calendarDate ? T.ink0 : T.ink3, flexShrink: 0, whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => { if (active !== calendarDate) e.currentTarget.style.color = T.ink1; }}
+                  onMouseLeave={e => { if (active !== calendarDate) e.currentTarget.style.color = T.ink3; }}>
+                  <span style={{ fontFamily: T.fontSans, fontSize: 9, fontWeight: 700,
+                                 textTransform: 'uppercase', letterSpacing: '.14em',
+                                 color: active === calendarDate ? T.accent : T.ink4, marginBottom: 2 }}>
+                    archive
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontFamily: T.fontDisplay, fontWeight: active === calendarDate ? 700 : 400,
+                                   fontStyle: 'italic', fontSize: 13, lineHeight: 1,
+                                   color: active === calendarDate ? T.ink0 : T.ink3 }}>
+                      {fmtDateShort(calendarDate)}
+                    </span>
+                    {calendarMood && (
+                      <span style={{ width: 5, height: 5, borderRadius: '50%',
+                                     background: moodColor(calendarMood) }}/>
+                    )}
+                  </span>
+                </button>
+                {/* Close button */}
+                <button onClick={onCalendarClose}
+                  title="Close archive tab"
+                  style={{ background: 'transparent', border: 0, cursor: 'pointer',
+                           padding: '0 10px 0 4px', color: T.ink4, fontSize: 14, lineHeight: 1,
+                           display: 'flex', alignItems: 'center',
+                           borderBottom: `3px solid ${active === calendarDate ? T.accent : 'transparent'}` }}
+                  onMouseEnter={e => e.currentTarget.style.color = T.ink1}
+                  onMouseLeave={e => e.currentTarget.style.color = T.ink4}>
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Calendar picker button */}
+            <div ref={calRef} style={{ position: 'relative', display: 'flex', alignItems: 'center',
+                                       padding: '0 8px', flexShrink: 0 }}>
+              <button onClick={() => setCalOpen(o => !o)}
+                title="Pick a date"
+                style={{ background: 'transparent', border: `1px solid ${calOpen ? T.accent : T.rule2}`,
+                         borderRadius: 6, cursor: 'pointer', width: 30, height: 30,
+                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                         color: calOpen ? T.accent : T.ink3 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.color = T.accent; }}
+                onMouseLeave={e => { if (!calOpen) { e.currentTarget.style.borderColor = T.rule2; e.currentTarget.style.color = T.ink3; } }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+              </button>
+              {calOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: '50%',
+                              transform: 'translateX(-50%)', zIndex: 200,
+                              background: T.surface, border: `1px solid ${T.rule}`,
+                              borderRadius: 8, padding: '12px 14px',
+                              boxShadow: '0 6px 20px rgba(0,0,0,0.12)', minWidth: 160 }}>
+                  <div style={{ fontFamily: T.fontSans, fontSize: 10, fontWeight: 700,
+                                textTransform: 'uppercase', letterSpacing: '.12em',
+                                color: T.ink4, marginBottom: 8 }}>Select date</div>
+                  <input type="date"
+                    min="2026-01-21"
+                    max={new Date().toISOString().split('T')[0]}
+                    defaultValue={calendarDate || ''}
+                    onChange={e => {
+                      if (e.target.value) { onCalendarSelect(e.target.value); setCalOpen(false); }
+                    }}
+                    style={{ fontFamily: T.fontSans, fontSize: 12, color: T.ink1,
+                             background: T.paperAlt, border: `1px solid ${T.rule2}`,
+                             borderRadius: 6, padding: '5px 8px', cursor: 'pointer',
+                             width: '100%', boxSizing: 'border-box' }}/>
+                  <div style={{ fontFamily: T.fontSans, fontSize: 10, color: T.ink4,
+                                marginTop: 7, lineHeight: 1.4 }}>
+                    Archive from 21 Jan 2026
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right controls — search + date meta + theme + refresh */}
@@ -2447,6 +2559,10 @@ function App() {
   const [pendingCat, setPendingCat] = React.useState(null);
   const [isMobile, setIsMobile]   = React.useState(window.innerWidth < 768);
 
+  const [calendarDate,    setCalendarDate]    = React.useState(null);
+  const [calendarDayData, setCalendarDayData] = React.useState(null);
+  const [calendarLoading, setCalendarLoading] = React.useState(false);
+
   React.useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
@@ -2500,15 +2616,53 @@ function App() {
     setPendingCat(cat);
   };
 
+  const fetchCalendarDay = React.useCallback((dateKey) => {
+    setCalendarDate(dateKey);
+    setActiveTab(dateKey);
+    setCalendarLoading(true);
+    setCalendarDayData(null);
+    fetch(`/api/data?date=${dateKey}`)
+      .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
+      .then(d => { if (d.error) throw new Error(d.error); setCalendarDayData(d.day); })
+      .catch(e => setCalendarDayData({ _error: e.message, articles: [], stats: { p12: 0, total: 0, sources: 0 },
+                                       tickers: [], digest: { body: '', secondOrder: '', tradingBrief: '', themes: [] },
+                                       date: dateKey, dateShort: dateKey, dateKey, mood: 'neutral', refreshed: '' }))
+      .finally(() => setCalendarLoading(false));
+  }, []);
+
+  const handleCalendarClose = () => {
+    setCalendarDate(null);
+    setCalendarDayData(null);
+    if (activeTab === calendarDate) setActiveTab('overview');
+  };
+
   return (
     <DashboardShell tabs={data.days} active={activeTab} onSelect={handleTabSelect}
                     onRefresh={() => fetchData(true)} loading={loading}
-                    searchQ={searchQ} setSearchQ={setSearchQ}>
+                    searchQ={searchQ} setSearchQ={setSearchQ}
+                    calendarDate={calendarDate} calendarMood={calendarDayData?.mood}
+                    onCalendarSelect={fetchCalendarDay} onCalendarClose={handleCalendarClose}>
       {activeTab === 'overview'
         ? <HifiOverview days={data.days} weekThemes={data.weekThemes || []} onSelectDay={handleTabSelect}/>
-        : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}
-                       searchQ={searchQ} setSearchQ={setSearchQ}
-                       initialCat={pendingCat}/>}
+        : activeTab === calendarDate
+          ? calendarLoading
+            ? <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                            height:'100%', flexDirection:'column', gap:12 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     style={{ animation:'spin .7s linear infinite', color:'var(--accent)' }}>
+                  <path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 6.35 2.65L21 9V3h-6l2.18 2.18"
+                        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span style={{ fontFamily:'"Inter",system-ui,sans-serif', fontSize:13, color:'var(--ink-3)' }}>
+                  Loading archive…
+                </span>
+              </div>
+            : calendarDayData
+              ? <HifiDesktop day={calendarDayData} searchQ={searchQ} setSearchQ={setSearchQ}/>
+              : null
+          : <HifiDesktop day={data.days.find(d => d.dateKey === activeTab) || data.days[0]}
+                         searchQ={searchQ} setSearchQ={setSearchQ}
+                         initialCat={pendingCat}/>}
     </DashboardShell>
   );
 }
