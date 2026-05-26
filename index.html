@@ -2588,6 +2588,20 @@ function App() {
       });
   }, []);
 
+  const fetchCalendarDay = React.useCallback((dateKey) => {
+    setCalendarDate(dateKey);
+    setActiveTab(dateKey);
+    setCalendarLoading(true);
+    setCalendarDayData(null);
+    fetch(`/api/data?date=${dateKey}`)
+      .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
+      .then(d => { if (d.error) throw new Error(d.error); setCalendarDayData(d.day); })
+      .catch(e => setCalendarDayData({ _error: e.message, articles: [], stats: { p12: 0, total: 0, sources: 0 },
+                                       tickers: [], digest: { body: '', secondOrder: '', tradingBrief: '', themes: [] },
+                                       date: dateKey, dateShort: dateKey, dateKey, mood: 'neutral', refreshed: '' }))
+      .finally(() => setCalendarLoading(false));
+  }, []);
+
   React.useEffect(() => { fetchData(); }, [fetchData]);
 
   if (error) {
@@ -2615,20 +2629,6 @@ function App() {
     setActiveTab(tab);
     setPendingCat(cat);
   };
-
-  const fetchCalendarDay = React.useCallback((dateKey) => {
-    setCalendarDate(dateKey);
-    setActiveTab(dateKey);
-    setCalendarLoading(true);
-    setCalendarDayData(null);
-    fetch(`/api/data?date=${dateKey}`)
-      .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
-      .then(d => { if (d.error) throw new Error(d.error); setCalendarDayData(d.day); })
-      .catch(e => setCalendarDayData({ _error: e.message, articles: [], stats: { p12: 0, total: 0, sources: 0 },
-                                       tickers: [], digest: { body: '', secondOrder: '', tradingBrief: '', themes: [] },
-                                       date: dateKey, dateShort: dateKey, dateKey, mood: 'neutral', refreshed: '' }))
-      .finally(() => setCalendarLoading(false));
-  }, []);
 
   const handleCalendarClose = () => {
     setCalendarDate(null);
