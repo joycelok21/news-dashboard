@@ -108,16 +108,11 @@ module.exports = async function handler(req, res) {
       : null
     : null;
 
-  const isBust = !!(req.query && req.query.t);
-
-  // Bust requests: never cache (CDN must not store these)
   // Historical dates: cache 24 h (they never change)
-  // Regular live feed: cache 60 s
-  res.setHeader('Cache-Control', isBust
-    ? 'no-store'
-    : dateFilter
-      ? 's-maxage=86400, stale-while-revalidate=3600'
-      : 's-maxage=60, stale-while-revalidate=120');
+  // Everything else (live feed + bust): no-store — always hit Google Sheets fresh
+  res.setHeader('Cache-Control', dateFilter
+    ? 's-maxage=86400, stale-while-revalidate=3600'
+    : 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 

@@ -2573,7 +2573,7 @@ function App() {
   const fetchData = React.useCallback((bust = false) => {
     setLoading(true);
     const url = bust ? `/api/data?t=${Date.now()}` : '/api/data';
-    fetch(url)
+    fetch(url, { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
       .then(d => {
         if (d.error) throw new Error(d.error);
@@ -2594,7 +2594,7 @@ function App() {
     setActiveTab(dateKey);
     setCalendarLoading(true);
     setCalendarDayData(null);
-    fetch(`/api/data?date=${dateKey}`)
+    fetch(`/api/data?date=${dateKey}`, { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
       .then(d => { if (d.error) throw new Error(d.error); setCalendarDayData(d.day); })
       .catch(e => setCalendarDayData({ _error: e.message, articles: [], stats: { p12: 0, total: 0, sources: 0 },
