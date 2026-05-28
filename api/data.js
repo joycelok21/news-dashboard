@@ -108,10 +108,16 @@ module.exports = async function handler(req, res) {
       : null
     : null;
 
-  // Historical dates never change — cache them for 24 h
-  res.setHeader('Cache-Control', dateFilter
-    ? 's-maxage=86400, stale-while-revalidate=3600'
-    : 's-maxage=300, stale-while-revalidate=600');
+  const isBust = !!(req.query && req.query.t);
+
+  // Bust requests: never cache (CDN must not store these)
+  // Historical dates: cache 24 h (they never change)
+  // Regular live feed: cache 60 s
+  res.setHeader('Cache-Control', isBust
+    ? 'no-store'
+    : dateFilter
+      ? 's-maxage=86400, stale-while-revalidate=3600'
+      : 's-maxage=60, stale-while-revalidate=120');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
