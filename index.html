@@ -489,7 +489,7 @@ function DigestBanner({ D }) {
       return (
         <div>
           <p style={{
-            fontFamily: T.fontDisplay, fontSize: 15, fontStyle: 'italic',
+            fontFamily: T.fontDisplay, fontSize: 15, fontStyle: 'normal', fontWeight: 600,
             lineHeight: 1.6, color: T.ink0, margin: '0 0 12px',
             paddingLeft: 22, position: 'relative',
           }}>
@@ -939,7 +939,7 @@ function ArticleCard({ a, selectedTicker, onTickerClick }) {
                     color: T.ink2, margin: '0 0 12px' }}>{a.summary}</p>
 
         {a.implication && (
-          <div style={{ fontFamily: T.fontDisplay, fontSize: 13, fontStyle: 'italic',
+          <div style={{ fontFamily: T.fontSans, fontSize: 13, fontStyle: 'normal',
                         lineHeight: 1.55, color: T.ink1,
                         padding: '8px 12px', borderLeft: `3px solid ${T.rule2}`,
                         background: T.paperAlt, marginBottom: 12 }}>
@@ -1761,8 +1761,8 @@ function MobileRow({ a, defaultOpen }) {
               <span style={{ fontFamily: T.fontSans, fontSize:9, fontWeight:700,
                              color: tone.fg, textTransform:'uppercase', letterSpacing:'.1em',
                              flexShrink:0, paddingTop:1 }}>Impl</span>
-              <span style={{ fontFamily: T.fontSerif, fontSize:12, color: T.ink1,
-                             fontStyle:'italic', lineHeight:1.4 }}>{a.implication}</span>
+              <span style={{ fontFamily: T.fontSans, fontSize:12, color: T.ink1,
+                             fontStyle:'normal', lineHeight:1.4 }}>{a.implication}</span>
             </div>
           )}
           <div style={{ marginBottom:10 }}>
