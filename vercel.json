@@ -1,8 +1,7 @@
 {
   "functions": {
-    "api/data.js": {
-      "maxDuration": 15
-    }
+    "api/data.js": { "maxDuration": 15 },
+    "api/track.js": { "maxDuration": 10 }
   },
   "headers": [
     {

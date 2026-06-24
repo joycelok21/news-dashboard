@@ -136,6 +136,72 @@
     letter-spacing: .08em; text-transform: uppercase;
   }
 </style>
+<script>
+// ── Analytics tracker ─────────────────────────────────────────────────────────
+window._tracker = (() => {
+  function genId() {
+    try { return crypto.randomUUID(); } catch (_) {
+      return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    }
+  }
+
+  // visitorId persists across sessions on the same browser
+  const visitorId = (() => {
+    try {
+      let id = localStorage.getItem('mi-visitor-id');
+      if (!id) { id = genId(); localStorage.setItem('mi-visitor-id', id); }
+      return id;
+    } catch (_) { return genId(); }
+  })();
+
+  const sessionId = genId();
+  let activeMs = 0;
+  let lastActive = Date.now();
+  let ended = false;
+
+  // Pause timer when tab is hidden, resume when visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      activeMs += Date.now() - lastActive;
+    } else {
+      lastActive = Date.now();
+    }
+  });
+
+  function getActiveSecs() {
+    return Math.round((activeMs + (document.hidden ? 0 : Date.now() - lastActive)) / 1000);
+  }
+
+  function send(event, detail, duration) {
+    const body = JSON.stringify({
+      visitorId, sessionId, event,
+      detail: detail || '',
+      ...(duration != null ? { duration } : {}),
+    });
+    if (event === 'session_end') {
+      // sendBeacon is reliable even when the tab is closing
+      navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' }, body,
+      }).catch(() => {});
+    }
+  }
+
+  function end() {
+    if (ended) return;
+    ended = true;
+    send('session_end', '', getActiveSecs());
+  }
+
+  // Fire session_end when tab is hidden or page is unloaded
+  document.addEventListener('visibilitychange', () => { if (document.hidden) end(); });
+  window.addEventListener('pagehide', end);
+
+  return { send };
+})();
+</script>
 </head>
 <body>
 <div id="loading">
@@ -2595,6 +2661,7 @@ function App() {
     setActiveTab(dateKey);
     setCalendarLoading(true);
     setCalendarDayData(null);
+    window._tracker.send('tab_click', `archive:${dateKey}`);
     fetch(`/api/data?date=${dateKey}`, { cache: 'no-store' })
       .then(r => { if (!r.ok) throw new Error(`Server returned ${r.status}`); return r.json(); })
       .then(d => { if (d.error) throw new Error(d.error); setCalendarDayData(d.day); })
@@ -2605,6 +2672,8 @@ function App() {
   }, []);
 
   React.useEffect(() => { fetchData(); }, [fetchData]);
+
+  React.useEffect(() => { window._tracker.send('page_load', 'dashboard'); }, []);
 
   if (error) {
     return (
@@ -2630,6 +2699,7 @@ function App() {
   const handleTabSelect = (tab, cat = null) => {
     setActiveTab(tab);
     setPendingCat(cat);
+    window._tracker.send('tab_click', tab);
   };
 
   const handleCalendarClose = () => {
