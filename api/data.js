@@ -129,7 +129,7 @@ module.exports = async function handler(req, res) {
     });
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const [newsRes, summaryRes] = await Promise.all([
+    const fetches = [
       sheets.spreadsheets.values.get({
         spreadsheetId: SHEET_ID,
         range: 'All Filtered News!A:N',
@@ -140,9 +140,22 @@ module.exports = async function handler(req, res) {
         range: 'Market Summary!A:H',
         valueRenderOption: 'FORMATTED_VALUE',
       }),
-    ]);
+    ];
 
-    const newsRows = (newsRes.data.values || []).slice(1).filter(r => r && r[3]);
+    if (dateFilter) {
+      fetches.push(sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: 'Archive!A:N',
+        valueRenderOption: 'FORMATTED_VALUE',
+      }));
+    }
+
+    const [newsRes, summaryRes, archiveRes] = await Promise.all(fetches);
+
+    const newsRows = [
+      ...(newsRes.data.values || []).slice(1).filter(r => r && r[3]),
+      ...(archiveRes ? (archiveRes.data.values || []).slice(1).filter(r => r && r[3]) : []),
+    ];
     const summaryRows = (summaryRes.data.values || []).slice(1).filter(r => r && (r[2] || r[6]));
 
     // Build articles by date
