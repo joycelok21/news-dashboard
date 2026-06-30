@@ -770,7 +770,7 @@ function HourlyTimeline({ D }) {
           <span><LegendSwatch c={T.bull}/>Bullish</span>
           <span><LegendSwatch c={T.mixed}/>Mixed</span>
           <span><LegendSwatch c={T.bear}/>Bearish</span>
-          <span style={{ marginLeft:6, color: T.ink2 }}>● large = P1 · medium = P2</span>
+          <span style={{ marginLeft:6, color: T.ink2 }}>● large = Priority 1 · medium = Priority 2</span>
         </div>
       </div>
       <div style={{ position:'relative', height:88, background: T.surface,
@@ -867,9 +867,9 @@ function FilterRow({ D, cat, toggleCat, prio, togglePrio, sent, toggleSent }) {
       ))}
       <div style={{ flex: 1 }}/>
       <div style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '0 6px' }}>
-        {[{ v: 'P1' }, { v: 'P2' }, { v: 'P3' }].map(opt => (
+        {[{ v: 'P1', label: 'Priority 1' }, { v: 'P2', label: 'Priority 2' }, { v: 'P3', label: 'Priority 3' }].map(opt => (
           <FilterToggle key={opt.v} on={prio.has(opt.v)}
-            onClick={() => togglePrio(opt.v)}>{opt.v}</FilterToggle>
+            onClick={() => togglePrio(opt.v)}>{opt.label}</FilterToggle>
         ))}
         <span style={{ width: 1, height: 14, background: T.rule2, margin: '0 5px' }}/>
         {[
@@ -925,7 +925,7 @@ function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
           ))
       }
       {[...prio].map(v => (
-        <FilterChip key={v} label={`Priority · ${v}`} onClear={() => togglePrio(v)}/>
+        <FilterChip key={v} label={v.replace('P', 'Priority ')} onClear={() => togglePrio(v)}/>
       ))}
       {[...sent].map(v => (
         <FilterChip key={v} label={`Sentiment · ${v}`} onClear={() => toggleSent(v)}/>
@@ -968,7 +968,7 @@ function ArticleCard({ a, selectedTicker, onTickerClick }) {
           background: a.priority === 'P1' ? T.ink0 : 'transparent',
           color: a.priority === 'P1' ? T.surface : T.ink3,
           border: a.priority !== 'P1' ? `1px solid ${T.rule2}` : 'none',
-        }}>{a.priority}</span>
+        }}>{a.priority.replace('P', 'Priority ')}</span>
         <SentBadge s={a.sentiment} size={8}/>
       </div>
 
@@ -1373,7 +1373,7 @@ function HifiDesktop({ day, searchQ, setSearchQ, initialCat }) {
 
           <SidebarSection label="Today's run">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {[['P1 + P2', D.stats.p12], ['Total', D.stats.total],
+              {[['Priority 1 + 2', D.stats.p12], ['Total', D.stats.total],
                 ['Sources', D.stats.sources], ['Tickers', D.tickers.length]].map(([l, n]) => (
                 <div key={l} style={{ background: T.paperAlt, border: `1px solid ${T.rule2}`,
                                       borderRadius: T.rMd, padding: '6px 8px' }}>
@@ -1440,7 +1440,7 @@ function HifiOverview({ days, weekThemes, onSelectDay }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 20,
                       fontFamily: T.fontSans, fontSize: 12, color: T.ink2 }}>
           {[['ink0', allArticles.length, 'stories'],
-            ['p1',   totalP1,           'P1 priority'],
+            ['p1',   totalP1,           'Priority 1'],
             ['bull', totalBull,         'bullish'],
             ['bear', totalBear,         'bearish'],
             ['ink0', Object.keys(tickerCounts).length, 'tickers'],
@@ -1953,8 +1953,8 @@ function MobileDayView({ day }) {
         </div>
         <div style={{ display:'flex', gap:4, overflowX:'auto', whiteSpace:'nowrap', paddingBottom:2 }}>
           <Chip on={cat.size===0 && prio.size===0 && sent.size===0} onClick={() => { setCat(new Set()); setPrio(new Set()); setSent(new Set()); }}>All</Chip>
-          <Chip on={prio.has('P1')} onClick={() => togglePrioM('P1')}>P1</Chip>
-          <Chip on={prio.has('P2')} onClick={() => togglePrioM('P2')}>P2</Chip>
+          <Chip on={prio.has('P1')} onClick={() => togglePrioM('P1')}>Priority 1</Chip>
+          <Chip on={prio.has('P2')} onClick={() => togglePrioM('P2')}>Priority 2</Chip>
           <Chip on={sent.has('bull')} onClick={() => toggleSentM('bull')}>Bull</Chip>
           <Chip on={sent.has('bear')} onClick={() => toggleSentM('bear')}>Bear</Chip>
           {window.NEWS_DATA.categories.map(c => (
@@ -2009,7 +2009,7 @@ function MobileOverview({ days, weekThemes, onSelectDay }) {
         </h1>
         <div style={{ display:'flex', gap:12, fontFamily: T.fontSans, fontSize:11, color: T.ink2 }}>
           <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.ink0 }}>{allArticles.length}</b> <span style={{ color: T.ink3 }}>stories</span></span>
-          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.p1 }}>{totalP1}</b> <span style={{ color: T.ink3 }}>P1</span></span>
+          <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.p1 }}>{totalP1}</b> <span style={{ color: T.ink3 }}>Priority 1</span></span>
           <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.bull }}>{totalBull}</b> <span style={{ color: T.ink3 }}>↑</span></span>
           <span><b style={{ fontFamily: T.fontDisplay, fontSize:15, fontWeight:700, color: T.bear }}>{totalBear}</b> <span style={{ color: T.ink3 }}>↓</span></span>
         </div>
@@ -2097,7 +2097,7 @@ function MobileOverview({ days, weekThemes, onSelectDay }) {
                   <SentBadge s={d.mood==='neutral' ? null : d.mood} size={9}/>
                   <div style={{ flex:1 }}/>
                   <span style={{ fontFamily: T.fontMono, fontSize:10, color: T.ink3 }}>
-                    {d.stats.total} · {d.stats.p12} P
+                    {d.stats.total} · {d.stats.p12} priority
                   </span>
                 </div>
                 <p style={{ fontFamily: T.fontDisplay, fontWeight:600, fontSize:13.5,
