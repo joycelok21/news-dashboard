@@ -940,19 +940,21 @@ function ActiveFilters({ searchQ, prio, sent, cat, ticker, bucket, bucketLabel,
 
 function ArticleCard({ a, selectedTicker, onTickerClick }) {
   const { tokens: T, sentTone, SentBadge, CatLabel } = window.HF;
+  const [expanded, setExpanded] = React.useState(false);
   const tone = sentTone(a.sentiment);
   const borderColor = a.priority === 'P1' ? T.accent :
                       a.priority === 'P2' ? T.ink4 : 'transparent';
   const borderWidth = a.priority === 'P1' ? '2.5px' : '1.5px';
   return (
-    <article style={{
+    <article onClick={() => setExpanded(e => !e)} style={{
       display: 'grid', gridTemplateColumns: '72px 1fr',
       gap: '0 24px',
-      padding: '22px 20px',
+      padding: '14px 20px',
       background: T.surface,
       borderRadius: 4,
       boxShadow: '0 1px 5px rgba(0,0,0,0.08)',
-      marginBottom: 10,
+      marginBottom: 6,
+      cursor: 'pointer',
     }}>
       {/* Time column */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
@@ -984,11 +986,15 @@ function ArticleCard({ a, selectedTicker, onTickerClick }) {
             letterSpacing: '.14em', textTransform: 'uppercase', color: T.ink3,
           }}>{a.source}</span>
           {a.cats.map(c => <CatLabel key={c} c={c}/>)}
+          <span style={{ marginLeft: 'auto', color: T.ink4, fontSize: 11, lineHeight: 1, userSelect: 'none' }}>
+            {expanded ? '▴' : '▾'}
+          </span>
         </div>
 
         {/* Headline */}
         {a.url ? (
           <a href={a.url} target="_blank" rel="noopener noreferrer"
+             onClick={e => e.stopPropagation()}
              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
             <h3 style={{ fontFamily: T.fontDisplay, fontWeight: 700, fontSize: 21, lineHeight: 1.25,
                          margin: '0 0 8px', color: T.ink0, letterSpacing: '-.2px',
@@ -1003,9 +1009,14 @@ function ArticleCard({ a, selectedTicker, onTickerClick }) {
         )}
 
         <p style={{ fontFamily: T.fontSans, fontSize: 13.5, lineHeight: 1.65,
-                    color: T.ink2, margin: '0 0 12px' }}>{a.summary}</p>
+                    color: T.ink2, margin: '0 0 12px',
+                    ...(expanded ? {} : {
+                      display: '-webkit-box', WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }),
+                  }}>{a.summary}</p>
 
-        {a.implication && (
+        {expanded && a.implication && (
           <div style={{ fontFamily: T.fontSans, fontSize: 13, fontStyle: 'normal',
                         lineHeight: 1.55, color: T.ink1,
                         padding: '8px 12px', borderLeft: `3px solid ${T.rule2}`,
@@ -1023,7 +1034,8 @@ function ArticleCard({ a, selectedTicker, onTickerClick }) {
             {a.tickers.map(t => {
               const active = selectedTicker === t;
               return (
-                <button key={t} onClick={() => onTickerClick && onTickerClick(t)}
+                <button key={t}
+                  onClick={e => { e.stopPropagation(); onTickerClick && onTickerClick(t); }}
                   style={{ fontFamily: T.fontSans, fontSize: 11, fontWeight: 600,
                            color: active ? '#fff' : T.ink1,
                            background: active ? T.accent : T.surface,
