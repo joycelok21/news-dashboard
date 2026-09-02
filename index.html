@@ -516,7 +516,7 @@ window.HF = (() => {
 
 function splitSentences(text) {
   if (!text) return [];
-  return text.trim().split(/(?<=[a-z0-9%])\.\s+/).map(s => s.trim()).filter(Boolean);
+  return text.trim().split(/(?<=[a-z0-9%)])\.\s+|(?<=[A-Z]{2,})\.\s+/).map(s => s.trim()).filter(Boolean);
 }
 
 function addPeriod(s) {
